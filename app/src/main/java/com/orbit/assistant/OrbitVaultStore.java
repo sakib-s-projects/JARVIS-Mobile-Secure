@@ -843,14 +843,12 @@ public final class OrbitVaultStore {
 
     private static void sort(List<OrbitVaultItem> items, Sort order) {
         Sort chosen = order == null ? Sort.NEWEST : order;
-        items.sort((a, b) -> {
-            int byTime = chosen == Sort.OLDEST
-                    ? Long.compare(a.createdAt, b.createdAt)
-                    : Long.compare(b.createdAt, a.createdAt);
-            // Two things saved in the same millisecond still need one stable order, or the list
-            // would reshuffle itself between two identical reads.
-            return byTime != 0 ? byTime : a.id.compareTo(b.id);
-        });
+        // The stored list is newest-first. Reverse it before a stable oldest-first sort so
+        // items created in the same millisecond retain their actual insertion order.
+        if (chosen == Sort.OLDEST) java.util.Collections.reverse(items);
+        items.sort((a, b) -> chosen == Sort.OLDEST
+                ? Long.compare(a.createdAt, b.createdAt)
+                : Long.compare(b.createdAt, a.createdAt));
     }
 
     static SharedPreferences prefs(Context c) {
