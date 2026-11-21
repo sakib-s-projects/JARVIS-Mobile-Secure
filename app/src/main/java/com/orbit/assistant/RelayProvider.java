@@ -86,6 +86,7 @@ final class RelayProvider implements AiProvider {
                 conn.setRequestMethod("POST");
                 conn.setConnectTimeout(15000);
                 conn.setReadTimeout(90000);
+                conn.setInstanceFollowRedirects(false);
                 conn.setDoOutput(true);
                 conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
                 conn.setRequestProperty("Accept", "application/json");
@@ -188,6 +189,7 @@ final class RelayProvider implements AiProvider {
                 conn.setRequestMethod("POST");
                 conn.setConnectTimeout(15000);
                 conn.setReadTimeout(90000);
+                conn.setInstanceFollowRedirects(false);
                 conn.setDoOutput(true);
                 conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
                 conn.setRequestProperty("Accept", "application/json");
@@ -242,14 +244,24 @@ final class RelayProvider implements AiProvider {
         return Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP);
     }
 
+    private static final int MAX_RESPONSE_BYTES = 1024 * 1024;
+
     private static String readAll(InputStream in) throws Exception {
         if (in == null) return "";
-        StringBuilder b = new StringBuilder();
-        try (BufferedReader r = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = r.readLine()) != null) b.append(line);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        int total = 0;
+        int count;
+        try (InputStream source = in) {
+            while ((count = source.read(buffer)) != -1) {
+                total += count;
+                if (total > MAX_RESPONSE_BYTES) {
+                    throw new java.io.IOException("Relay response exceeded the 1 MiB limit.");
+                }
+                out.write(buffer, 0, count);
+            }
         }
-        return b.toString();
+        return new String(out.toByteArray(), StandardCharsets.UTF_8);
     }
 
     private static String safe(String s, int max) {
