@@ -39,8 +39,8 @@ public final class RelayTokenSecurityTest {
 
         assertEquals(TOKEN, SecureStore.loadRelayToken(context));
         assertFalse(Prefs.get(context).contains(Prefs.BACKEND_TOKEN));
-        assertTrue(Prefs.get(context).contains("relay_token_enc"));
-        assertTrue(Prefs.get(context).contains("relay_token_iv"));
+        assertTrue(Prefs.get(context).contains("backend_token_enc"));
+        assertTrue(Prefs.get(context).contains("backend_token_iv"));
         for (Map.Entry<String, ?> entry : Prefs.get(context).getAll().entrySet()) {
             assertFalse("plaintext token remains in " + entry.getKey(),
                     String.valueOf(entry.getValue()).contains(TOKEN));
@@ -53,8 +53,8 @@ public final class RelayTokenSecurityTest {
         assertEquals(TOKEN, SecureStore.loadRelayToken(context));
         assertTrue(SecureStore.saveRelayToken(context, ""));
         assertEquals("", SecureStore.loadRelayToken(context));
-        assertFalse(Prefs.get(context).contains("relay_token_enc"));
-        assertFalse(Prefs.get(context).contains("relay_token_iv"));
+        assertFalse(Prefs.get(context).contains("backend_token_enc"));
+        assertFalse(Prefs.get(context).contains("backend_token_iv"));
     }
 
     @Test public void saveSettingsDoesNotPersistPlaintextWhenKeystoreUnavailable() {
