@@ -83,9 +83,16 @@ public final class ComponentInstallHandoffTest {
         try {
             OrbitLocalInstaller.launchInstaller(activity, apk);
         } catch (Exception e) {
-            assertEquals("a correctly placed component must never be refused by Orbit's own "
-                            + "checks; it may only fail at the platform handoff",
-                    OrbitLocalInstaller.InstallStage.FILEPROVIDER_URI.message, e.getMessage());
+            // Robolectric cannot faithfully model FileProvider's configured roots or Android's
+            // package-installer Activity. All three failures below are platform handoff stages;
+            // any earlier stage means Orbit itself rejected a correctly placed component.
+            String message = e.getMessage();
+            boolean reachedPlatformHandoff =
+                    OrbitLocalInstaller.InstallStage.FILEPROVIDER_URI.message.equals(message)
+                    || OrbitLocalInstaller.InstallStage.NO_INSTALLER.message.equals(message)
+                    || OrbitLocalInstaller.InstallStage.START_ACTIVITY.message.equals(message);
+            assertTrue("a correctly placed component must pass Orbit's own gates and fail, if at all, "
+                    + "only at the platform handoff; got: " + message, reachedPlatformHandoff);
         }
     }
 
