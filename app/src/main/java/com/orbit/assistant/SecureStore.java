@@ -39,19 +39,24 @@ public final class SecureStore {
 
     private SecureStore() {}
 
-    public static void saveRelayToken(Context c, String value) {
+    /**
+     * Stores the optional relay token only in Android Keystore-backed AES-GCM storage.
+     * A Keystore failure is fail-closed: no plaintext preference fallback is written.
+     */
+    public static boolean saveRelayToken(Context c, String value) {
+        String token = value == null ? "" : value.trim();
+        if (token.isEmpty()) {
+            return Prefs.get(c).edit().remove(RELAY_ENC).remove(RELAY_IV)
+                    .remove(Prefs.BACKEND_TOKEN).commit();
+        }
         try {
-            if (value == null || value.isEmpty()) {
-                Prefs.get(c).edit().remove(RELAY_ENC).remove(RELAY_IV).remove(Prefs.BACKEND_TOKEN).apply();
-                return;
-            }
-            if (!encrypt(c, RELAY_ALIAS, RELAY_ENC, RELAY_IV, value)) {
-                throw new IllegalStateException("Could not persist encrypted relay credentials");
-            }
-            Prefs.get(c).edit().remove(Prefs.BACKEND_TOKEN).apply();
+            boolean saved = encrypt(c, RELAY_ALIAS, RELAY_ENC, RELAY_IV, token);
+            if (!saved) return false;
+            return Prefs.get(c).edit().remove(Prefs.BACKEND_TOKEN).commit();
         } catch (Exception e) {
-            // Compatibility fallback only for the optional relay token. The OpenAI API key is never stored here.
-            Prefs.get(c).edit().putString(Prefs.BACKEND_TOKEN, value == null ? "" : value).apply();
+            // Never downgrade a credential to plaintext if the Keystore is unavailable.
+            Prefs.get(c).edit().remove(Prefs.BACKEND_TOKEN).commit();
+            return false;
         }
     }
 
@@ -59,8 +64,19 @@ public final class SecureStore {
         try {
             String value = decrypt(c, RELAY_ALIAS, RELAY_ENC, RELAY_IV);
             if (!value.isEmpty()) return value;
-        } catch (Exception ignored) {}
-        return Prefs.get(c).getString(Prefs.BACKEND_TOKEN, "").trim();
+        } catch (Exception ignored) {
+            // A broken encrypted value is not a reason to fall back to plaintext storage.
+            Prefs.get(c).edit().remove(Prefs.BACKEND_TOKEN).commit();
+            return "";
+        }
+
+        // One-time migration for tokens saved by older versions. If encryption fails, discard
+        // the legacy plaintext copy and ask the user to enter the token again.
+        String legacy = Prefs.get(c).getString(Prefs.BACKEND_TOKEN, "").trim();
+        if (legacy.isEmpty()) return "";
+        if (saveRelayToken(c, legacy)) return legacy;
+        Prefs.get(c).edit().remove(Prefs.BACKEND_TOKEN).commit();
+        return "";
     }
 
     /**
