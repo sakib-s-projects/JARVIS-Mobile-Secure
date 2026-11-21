@@ -138,7 +138,7 @@ public final class SiteTasksActivity extends Activity {
             note.setPadding(UiKit.dp(this, 36), 0, 0, UiKit.dp(this, 4));
             card.addView(note);
         }
-        TextView created = UiKit.text(this, "Added " + DateFormat.getDateInstance(DateFormat.MEDIUM)
+        TextView created = UiKit.text(this, "Created " + DateFormat.getDateInstance(DateFormat.MEDIUM)
                 .format(new Date(task.createdAt)), 11, UiKit.MUTED, false);
         created.setPadding(UiKit.dp(this, 36), 0, 0, UiKit.dp(this, 10));
         card.addView(created);
@@ -151,15 +151,20 @@ public final class SiteTasksActivity extends Activity {
         delLp.leftMargin = UiKit.dp(this, 8);
         actions.addView(delete, delLp);
         edit.setOnClickListener(v -> showEditor(task));
-        delete.setOnClickListener(v -> new AlertDialog.Builder(this)
-                .setTitle("Delete task?")
-                .setMessage("This task will be removed from the list.")
-                .setNegativeButton("Cancel", null)
-                .setPositiveButton("Delete", (d, w) -> {
-                    if (!task.reminderId.isEmpty()) ReminderScheduler.cancel(this, task.reminderId);
-                    SiteTaskStore.remove(this, task.id);
-                    refresh();
-                }).show());
+        delete.setOnClickListener(v -> {
+            AlertDialog.Builder deleteBuilder = new AlertDialog.Builder(this)
+                    .setTitle("Delete task?")
+                    .setMessage("This task will be removed from the list.")
+                    .setNegativeButton("Cancel", null)
+                    .setPositiveButton("Delete", (d, w) -> {
+                        if (!task.reminderId.isEmpty()) ReminderScheduler.cancel(this, task.reminderId);
+                        SiteTaskStore.remove(this, task.id);
+                        refresh();
+                    });
+            AlertDialog deleteDialog = deleteBuilder.create();
+            UiKit.styleOrbitDialog(deleteDialog, this, false);
+            deleteDialog.show();
+        });
         card.addView(actions);
         Button reminder = secondaryButton(task.reminderAt > 0L
                 ? "Reminder: " + DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
