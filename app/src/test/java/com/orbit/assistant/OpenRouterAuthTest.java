@@ -305,7 +305,8 @@ public final class OpenRouterAuthTest {
         OpenRouterAuth.start(context, recorder, 300L);
         OpenRouterAuth.Attempt attempt = OpenRouterAuth.activeForTest();
         long until = System.currentTimeMillis() + 5000L;
-        while (!attempt.server.isClosed() && System.currentTimeMillis() < until) Thread.sleep(50);
+        while ((!attempt.server.isClosed() || recorder.failed.get() == 0)
+                && System.currentTimeMillis() < until) Thread.sleep(50);
         ShadowLooper.idleMainLooper();
         assertTrue(attempt.server.isClosed());
         assertEquals(1, recorder.failed.get());
