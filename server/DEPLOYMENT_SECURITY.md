@@ -19,7 +19,7 @@ This checklist applies to the FastAPI relay in this directory. CI tests the rela
 - For a single relay process, the configured limit is enforced per process.
 - Do not scale to multiple workers or replicas and assume the same token-wide limit applies globally.
 - Before multi-worker or multi-replica deployment, replace or front this limiter with a shared atomic store (for example, Redis) and test its failure behavior. A shared-store outage must not silently disable the intended abuse controls.
-- The repository Dockerfile explicitly starts Uvicorn with `--workers 1`; keep that image command intact. Confirm the hosting platform does not start additional replicas or wrap it in a multi-worker process. The in-process limiter is not a global limit across replicas.
+- Keep exactly one worker/process (the repository Dockerfile explicitly starts Uvicorn with `--workers 1`); keep that image command intact. Confirm the hosting platform does not start additional replicas or wrap it in a multi-worker process. The in-process limiter is not a global limit across replicas.
 
 ## Live verification before declaring production ready
 
