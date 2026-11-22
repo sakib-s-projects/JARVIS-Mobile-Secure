@@ -85,7 +85,13 @@ class RequestBodyLimitMiddleware:
 
 
 app.add_middleware(RequestBodyLimitMiddleware)
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+# Bound upstream latency so stalled provider calls cannot occupy the single relay worker indefinitely.
+UPSTREAM_TIMEOUT_SECONDS = 45.0
+client = OpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY"),
+    timeout=UPSTREAM_TIMEOUT_SECONDS,
+    max_retries=0,
+)
 
 ALLOWED_MODELS = {"gpt-6-luna", "gpt-6.1-sol", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.6"}
 ALLOWED_REASONING = {"none", "low", "medium", "high", "xhigh", "max"}
