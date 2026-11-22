@@ -37,16 +37,16 @@ class AssistantRequest(BaseModel):
     model: str = "gpt-6-luna"
     reasoning: str = "low"
     screenText: str = Field(default="", max_length=110000)
-    clientTime: str = ""
-    timezone: str = ""
-    locale: str = ""
+    clientTime: str = Field(default="", max_length=128)
+    timezone: str = Field(default="", max_length=128)
+    locale: str = Field(default="", max_length=64)
     leloMode: bool = False
     memoryContext: str = Field(default="", max_length=9000)
     trustedTaskContext: str = Field(default="", max_length=3000)
     notificationContext: str = Field(default="", max_length=25000)
-    screenshotBase64: str | None = None
+    screenshotBase64: str | None = Field(default=None, max_length=4 * 1024 * 1024)
     history: list[HistoryItem] = Field(default_factory=list, max_length=12)
-    capabilities: list[str] = Field(default_factory=list)
+    capabilities: list[str] = Field(default_factory=list, max_length=32)
 
 
 class DeviceAction(BaseModel):
