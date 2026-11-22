@@ -183,6 +183,7 @@ dependencies {
     // optional :local component so an Orbit install without local AI never carries it.
     // ReleaseModularityTest fails the build if tasks-genai returns to this module.
     testImplementation "junit:junit:4.13.2"
+    testImplementation "com.squareup.okhttp3:mockwebserver:4.12.0"
     testImplementation "org.robolectric:robolectric:4.16"
     androidTestImplementation "androidx.test:core:1.6.1"
     androidTestImplementation "androidx.test.ext:junit:1.2.1"
