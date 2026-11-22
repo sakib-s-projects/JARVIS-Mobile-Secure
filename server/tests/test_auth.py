@@ -141,3 +141,32 @@ def test_content_length_precheck_rejects_without_reading_body():
              "headers": [(b"content-length", b"33")]}
     asyncio.run(RequestBodyLimitMiddleware(downstream, max_bytes=32)(scope, receive, send))
     assert delivered[0]["status"] == 413
+
+def test_rate_limit_keys_are_isolated():
+    limiter = RelayRateLimiter(limit=1, window_seconds=60, clock=lambda: 100.0)
+    limiter.check("token-a")
+    limiter.check("token-b")
+    with pytest.raises(HTTPException) as exc:
+        limiter.check("token-a")
+    assert exc.value.status_code == 429
+
+
+def test_rate_limiter_prunes_expired_buckets():
+    now = [100.0]
+    limiter = RelayRateLimiter(limit=2, window_seconds=60, clock=lambda: now[0])
+    limiter.check("old-token")
+    assert "old-token" in limiter._buckets
+    now[0] = 160.0
+    limiter.check("new-token")
+    assert "old-token" not in limiter._buckets
+    assert "new-token" in limiter._buckets
+
+
+def test_rate_limit_retry_after_near_window_end():
+    now = [159.9]
+    limiter = RelayRateLimiter(limit=1, window_seconds=60, clock=lambda: now[0])
+    limiter.check("token")
+    with pytest.raises(HTTPException) as exc:
+        limiter.check("token")
+    assert exc.value.status_code == 429
+    assert exc.value.headers["Retry-After"] == "1"
