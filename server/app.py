@@ -58,6 +58,8 @@ class RequestBodyLimitMiddleware:
         total = 0
         while True:
             message = await receive()
+            if message.get("type") == "http.disconnect":
+                return
             if message.get("type") != "http.request":
                 continue
             chunk = message.get("body", b"")
