@@ -9,7 +9,7 @@ import java.util.List;
 import static org.junit.Assert.*;
 
 public class OrbitPublicDnsTest {
-    private static InetAddress ip(String value) throws Exception { return InetAddress.getByName(value); }
+    private static InetAddress ip(String value) throws UnknownHostException { return InetAddress.getByName(value); }
 
     @Test public void acceptsPublicV4AndV6() throws Exception {
         OrbitPublicDns dns = new OrbitPublicDns(host -> Arrays.asList(ip("8.8.8.8"), ip("2001:4860:4860::8888")));
