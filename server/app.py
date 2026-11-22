@@ -39,7 +39,7 @@ class RequestBodyLimitMiddleware:
             await self.app(scope, receive, send)
             return
 
-        headers = dict(scope.get("headers", [])))
+        headers = dict(scope.get("headers", []))
         raw_length = headers.get(b"content-length")
         if raw_length:
             try:
