@@ -44,3 +44,21 @@ def test_correct_token_accepted(monkeypatch):
     token = "a" * 32
     monkeypatch.setenv("ORBIT_RELAY_TOKEN", token)
     check_auth("Bearer " + token)
+
+
+from pydantic import ValidationError
+from app import AssistantRequest
+
+
+def test_request_metadata_limits():
+    with pytest.raises(ValidationError):
+        AssistantRequest(prompt='ok', timezone='x' * 129)
+    with pytest.raises(ValidationError):
+        AssistantRequest(prompt='ok', locale='x' * 65)
+    with pytest.raises(ValidationError):
+        AssistantRequest(prompt='ok', capabilities=['cap'] * 33)
+
+
+def test_screenshot_payload_limit():
+    with pytest.raises(ValidationError):
+        AssistantRequest(prompt='ok', screenshotBase64='x' * (4 * 1024 * 1024 + 1))
