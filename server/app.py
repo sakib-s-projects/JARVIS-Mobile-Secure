@@ -183,16 +183,28 @@ Lelo mode is enabled. Use a casual, playful, friend-like texting style. Prefer l
 
 def check_auth(authorization: str | None) -> None:
     expected = os.environ.get("ORBIT_RELAY_TOKEN", "")
-    # Fail closed: unset, blank, or weak secrets must never disable authentication.
+    # Fail closed: unset, blank, or weak primary secrets must never disable authentication.
     if not expected or not expected.strip() or len(expected) < 32:
         raise HTTPException(status_code=503, detail="Relay authentication is not configured securely")
     if authorization is None or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid relay token")
     supplied = authorization[len("Bearer "):]
-    if not hmac.compare_digest(supplied, expected):
+
+    # Optional previous token is accepted only during an explicitly bounded rotation window.
+    previous = os.environ.get("ORBIT_RELAY_TOKEN_PREVIOUS", "")
+    previous_expires = os.environ.get("ORBIT_RELAY_TOKEN_PREVIOUS_EXPIRES_AT", "")
+    previous_valid = False
+    try:
+        expires_at = float(previous_expires)
+        previous_valid = bool(previous and previous.strip() and len(previous) >= 32 and time.time() < expires_at)
+    except (TypeError, ValueError):
+        previous_valid = False
+
+    # Perform constant-time comparisons for both configured candidates.
+    primary_match = hmac.compare_digest(supplied, expected)
+    previous_match = hmac.compare_digest(supplied, previous if previous else "")
+    if not (primary_match or (previous_valid and previous_match)):
         raise HTTPException(status_code=401, detail="Invalid relay token")
-
-
 
 
 class RelayRateLimiter:
