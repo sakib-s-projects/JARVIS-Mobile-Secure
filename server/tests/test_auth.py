@@ -182,3 +182,25 @@ def test_rate_limit_retry_after_rounds_up():
         limiter.check("token")
     assert exc.value.status_code == 429
     assert exc.value.headers["Retry-After"] == "2"
+
+
+def test_prompt_and_context_field_bounds():
+    with pytest.raises(ValidationError):
+        AssistantRequest(prompt="")
+    with pytest.raises(ValidationError):
+        AssistantRequest(prompt="p" * 20001)
+    with pytest.raises(ValidationError):
+        AssistantRequest(prompt="ok", memoryContext="m" * 9001)
+    with pytest.raises(ValidationError):
+        AssistantRequest(prompt="ok", trustedTaskContext="t" * 3001)
+    with pytest.raises(ValidationError):
+        AssistantRequest(prompt="ok", notificationContext="n" * 25001)
+
+
+def test_history_count_and_item_bounds():
+    valid_item = {"role": "user", "content": "hello"}
+    assert len(AssistantRequest(prompt="ok", history=[valid_item] * 12).history) == 12
+    with pytest.raises(ValidationError):
+        AssistantRequest(prompt="ok", history=[valid_item] * 13)
+    with pytest.raises(ValidationError):
+        AssistantRequest(prompt="ok", history=[{"role": "assistant", "content": "h" * 7001}])
