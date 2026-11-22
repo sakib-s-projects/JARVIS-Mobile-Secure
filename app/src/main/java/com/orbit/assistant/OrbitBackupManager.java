@@ -156,19 +156,30 @@ public final class OrbitBackupManager {
 
         boolean committed = applySnapshot(context, restored);
         if (!committed) {
-            applySnapshot(context, before);
-            for (File file : createdFiles) if (file != null) file.delete();
+            boolean rolledBack = applySnapshot(context, before);
+            deleteCreatedFiles(createdFiles);
             RoutineTriggerScheduler.rescheduleAll(context);
             ReminderScheduler.rescheduleAll(context);
+            if (!rolledBack) {
+                throw new IllegalStateException(
+                        "Orbit could not replace all local data, and automatic rollback was incomplete. " +
+                        "Do not continue using this installation until the previous backup is restored.");
+            }
             throw new IllegalStateException("Orbit could not replace all local data; the previous data was restored.");
         }
         // Extension credentials are intentionally never part of portable backups.
         // Clear device-local encrypted values only after the full safe snapshot commits,
         // so a failed restore cannot discard credentials from the current installation.
         if (!OrbitExtensionSecretStore.clearAll(context)) {
-            applySnapshot(context, before);
+            boolean rolledBack = applySnapshot(context, before);
+            deleteCreatedFiles(createdFiles);
             RoutineTriggerScheduler.rescheduleAll(context);
             ReminderScheduler.rescheduleAll(context);
+            if (!rolledBack) {
+                throw new IllegalStateException(
+                        "Orbit could not securely clear extension credentials, and automatic rollback was incomplete. " +
+                        "Do not continue using this installation until the previous backup is restored.");
+            }
             throw new IllegalStateException(
                     "Orbit could not securely clear extension credentials; the previous local data was restored.");
         }
@@ -207,6 +218,15 @@ public final class OrbitBackupManager {
     private static JSONArray parseArray(String name, String raw) throws Exception {
         try { return new JSONArray(raw == null ? "[]" : raw); }
         catch (Exception e) { throw new IllegalStateException("Orbit's " + name + " store is damaged."); }
+    }
+
+    private static void deleteCreatedFiles(List<File> files) {
+        if (files == null) return;
+        for (File file : files) {
+            if (file != null && file.exists() && !file.delete()) {
+                // Orphan cleanup is best-effort; never hide the primary restore/rollback result.
+            }
+        }
     }
 
     private static boolean applySnapshot(Context c, JSONObject data) {
