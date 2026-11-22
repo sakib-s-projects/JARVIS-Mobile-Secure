@@ -342,3 +342,22 @@ def test_untrusted_context_markup_is_escaped():
     assert "<" not in escaped
     assert ">" not in escaped
     assert "&lt;untrusted_memory_context&gt;" in escaped
+
+
+def test_rate_limiter_enforces_limit_under_concurrent_requests():
+    from concurrent.futures import ThreadPoolExecutor
+
+    limiter = RelayRateLimiter(limit=5, window_seconds=60, clock=lambda: 100.0)
+
+    def attempt():
+        try:
+            limiter.check("shared-token")
+            return "allowed"
+        except HTTPException as exc:
+            return exc.status_code
+
+    with ThreadPoolExecutor(max_workers=20) as pool:
+        outcomes = list(pool.map(lambda _: attempt(), range(20)))
+
+    assert outcomes.count("allowed") == 5
+    assert outcomes.count(429) == 15
