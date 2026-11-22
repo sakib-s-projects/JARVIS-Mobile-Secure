@@ -305,3 +305,11 @@ def test_primary_token_remains_valid_during_rotation(monkeypatch):
     monkeypatch.setenv("ORBIT_RELAY_TOKEN_PREVIOUS_EXPIRES_AT", "1")
     monkeypatch.setattr(app.time, "time", lambda: 100.0)
     check_auth("Bearer " + primary)
+
+
+def test_malformed_bearer_headers_rejected(monkeypatch):
+    monkeypatch.setenv("ORBIT_RELAY_TOKEN", "a" * 32)
+    for authorization in ("Bearer ", "Basic " + "a" * 32, "Bearer  " + "a" * 32, "Bearer " + "a" * 32 + " "):
+        with pytest.raises(HTTPException) as exc:
+            check_auth(authorization)
+        assert exc.value.status_code == 401
