@@ -56,7 +56,7 @@ public class OrbitHttpsIntegrationTest {
             server.useHttps(MockWebServer.sslSocketFactory());
             server.enqueue(new MockResponse().setResponseCode(200).setBody("should-not-be-read"));
             server.start();
-            String url = server.url("/tls-check").toString().replace("127.0.0.1", "wrong-host.invalid");
+            String url = server.url("/tls-check").toString().replace("localhost", "wrong-host.invalid").replace("127.0.0.1", "wrong-host.invalid");
             try {
                 client(false).newCall(new Request.Builder().url(url).build()).execute().close();
                 fail("TLS hostname mismatch must fail");
