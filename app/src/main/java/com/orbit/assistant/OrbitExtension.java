@@ -328,7 +328,7 @@ public final class OrbitExtension {
         }
     }
 
-    private static boolean isPublicAddress(InetAddress address) {
+    static boolean isPublicAddress(InetAddress address) {
         if (address == null || address.isAnyLocalAddress() || address.isLoopbackAddress() ||
                 address.isLinkLocalAddress() || address.isSiteLocalAddress() ||
                 address.isMulticastAddress()) return false;
