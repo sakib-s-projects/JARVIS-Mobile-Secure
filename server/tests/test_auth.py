@@ -434,3 +434,11 @@ def test_container_pins_single_worker_for_process_local_rate_limiter():
     deployment = (Path(__file__).resolve().parent.parent / "DEPLOYMENT_SECURITY.md").read_text(encoding="utf-8")
     assert "uvicorn app:app --host 0.0.0.0 --port ${PORT} --workers 1" in dockerfile
     assert "one worker/process" in deployment
+
+
+def test_openai_client_has_bounded_timeout_and_no_automatic_retries():
+    import app as relay_app
+
+    assert relay_app.client.timeout == relay_app.UPSTREAM_TIMEOUT_SECONDS
+    assert relay_app.UPSTREAM_TIMEOUT_SECONDS == 45.0
+    assert relay_app.client.max_retries == 0
