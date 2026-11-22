@@ -204,3 +204,35 @@ def test_history_count_and_item_bounds():
         AssistantRequest(prompt="ok", history=[valid_item] * 13)
     with pytest.raises(ValidationError):
         AssistantRequest(prompt="ok", history=[{"role": "assistant", "content": "h" * 7001}])
+
+from app import DeviceAction, filter_device_actions
+
+
+def test_action_filter_blocks_unannounced_action():
+    actions = [DeviceAction(type="SMS", params={"body": "hi"}), DeviceAction(type="OPEN_APP", params={"app": "Maps"})]
+    filtered = filter_device_actions(actions, ["OPEN_APP"], "open maps")
+    assert [a.type for a in filtered] == ["OPEN_APP"]
+
+
+def test_action_filter_keeps_only_announced_types():
+    actions = [DeviceAction(type="SET_ALARM"), DeviceAction(type="SET_REMINDER")]
+    filtered = filter_device_actions(actions, ["SET_ALARM", "SET_REMINDER"], "remind me")
+    assert [a.type for a in filtered] == ["SET_ALARM", "SET_REMINDER"]
+
+
+def test_web_search_action_blocked_without_explicit_browser_request():
+    actions = [DeviceAction(type="WEB_SEARCH", params={"query": "latest weather"})]
+    assert filter_device_actions(actions, ["WEB_SEARCH"], "what is the latest weather?") == []
+
+
+def test_web_search_action_allowed_for_explicit_browser_search():
+    actions = [DeviceAction(type="WEB_SEARCH", params={"query": "construction news"})]
+    filtered = filter_device_actions(actions, ["WEB_SEARCH"], "search the web for construction news")
+    assert [a.type for a in filtered] == ["WEB_SEARCH"]
+
+
+def test_action_filter_does_not_modify_input_list():
+    actions = [DeviceAction(type="SMS"), DeviceAction(type="OPEN_APP")]
+    original = list(actions)
+    filter_device_actions(actions, ["OPEN_APP"], "open app")
+    assert actions == original
