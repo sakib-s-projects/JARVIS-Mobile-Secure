@@ -525,13 +525,18 @@ public final class OrbitBackupManager {
             if (o == null || !addUnique(ids, o.optString("id", "")) || name.isEmpty() ||
                     !names.add(name.toLowerCase(Locale.US)) || actions == null || actions.length() == 0 ||
                     actions.length() > RoutineActionCatalog.MAX_STEPS) invalid("Routines");
+            List<AssistantReply.Action> validatedActions = new ArrayList<>();
             for (int j = 0; j < actions.length(); j++) {
                 JSONObject action = actions.optJSONObject(j);
-                if (action == null || action.optJSONObject("params") == null ||
-                        !RoutineActionCatalog.isValid(new AssistantReply.Action(action.optString("type", ""),
-                                action.optJSONObject("params"), action.optBoolean("requiresConfirmation", false))))
+                if (action == null || action.optJSONObject("params") == null)
                     invalid("Routine action chains");
+                AssistantReply.Action parsed = new AssistantReply.Action(action.optString("type", ""),
+                        action.optJSONObject("params"), action.optBoolean("requiresConfirmation", false));
+                if (!RoutineActionCatalog.isValid(parsed)) invalid("Routine action chains");
+                validatedActions.add(parsed);
             }
+            // Validate whole-chain IF/ELSE geometry as well as individual action schemas.
+            if (!RoutineBranch.structureValid(validatedActions)) invalid("Routine branch structure");
         }
         return ids;
     }
