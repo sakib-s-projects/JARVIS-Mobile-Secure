@@ -14,6 +14,9 @@ import json
 import os
 import re
 import hmac
+import hashlib
+import time
+import threading
 from typing import Any, Literal
 
 from fastapi import FastAPI, Header, HTTPException
@@ -131,6 +134,38 @@ def check_auth(authorization: str | None) -> None:
         raise HTTPException(status_code=401, detail="Invalid relay token")
 
 
+
+
+class RelayRateLimiter:
+    """Process-local fixed-window limit; shared token bucket per relay instance."""
+    def __init__(self, limit: int = 12, window_seconds: int = 60, clock=time.monotonic):
+        self.limit = limit
+        self.window_seconds = window_seconds
+        self.clock = clock
+        self._lock = threading.Lock()
+        self._buckets: dict[str, tuple[int, float]] = {}
+
+    def check(self, key: str) -> int:
+        now = self.clock()
+        with self._lock:
+            count, start = self._buckets.get(key, (0, now))
+            if now - start >= self.window_seconds:
+                count, start = 0, now
+            if count >= self.limit:
+                retry = max(1, int(self.window_seconds - (now - start)))
+                raise HTTPException(status_code=429, detail="Rate limit exceeded", headers={"Retry-After": str(retry)})
+            self._buckets[key] = (count + 1, start)
+            # Prune expired buckets to keep memory bounded.
+            expired = [bucket for bucket, (_, began) in self._buckets.items()
+                       if now - began >= self.window_seconds]
+            for bucket in expired:
+                self._buckets.pop(bucket, None)
+            return self.limit - count - 1
+
+
+rate_limiter = RelayRateLimiter()
+
+
 def extract_json(text: str) -> dict[str, Any]:
     text = text.strip()
     if text.startswith("```"):
@@ -153,6 +188,8 @@ def health() -> dict[str, str]:
 @app.post("/assistant", response_model=AssistantResponse)
 def assistant(req: AssistantRequest, authorization: str | None = Header(default=None)) -> AssistantResponse:
     check_auth(authorization)
+    token_key = hashlib.sha256(os.environ.get("ORBIT_RELAY_TOKEN", "").encode()).hexdigest()
+    rate_limiter.check(token_key)
     if not os.environ.get("OPENAI_API_KEY"):
         raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not configured on the relay")
 
@@ -220,4 +257,4 @@ def assistant(req: AssistantRequest, authorization: str | None = Header(default=
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"OpenAI request failed: {exc}") from exc
+        raise HTTPException(status_code=502, detail="AI provider request failed") from exc
