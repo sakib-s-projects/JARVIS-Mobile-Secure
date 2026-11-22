@@ -15,4 +15,4 @@ ENV PORT=8787 \
 
 USER relay:relay
 
-CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT} --workers 1"]
