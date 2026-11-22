@@ -313,3 +313,23 @@ def test_malformed_bearer_headers_rejected(monkeypatch):
         with pytest.raises(HTTPException) as exc:
             check_auth(authorization)
         assert exc.value.status_code == 401
+
+
+def test_request_body_middleware_stops_on_client_disconnect():
+    import asyncio
+    from app import RequestBodyLimitMiddleware
+
+    calls = [0]
+    delivered = []
+    async def receive():
+        calls[0] += 1
+        return {"type": "http.disconnect"}
+    async def send(message):
+        delivered.append(message)
+    async def downstream(scope, receive, send):
+        raise AssertionError("downstream must not run after disconnect")
+
+    scope = {"type": "http", "method": "POST", "path": "/assistant", "headers": []}
+    asyncio.run(RequestBodyLimitMiddleware(downstream, max_bytes=32)(scope, receive, send))
+    assert calls[0] == 1
+    assert delivered == []
