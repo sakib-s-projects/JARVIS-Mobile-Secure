@@ -15,6 +15,7 @@ import os
 import re
 import hmac
 import hashlib
+import math
 import time
 import threading
 from typing import Any, Literal
@@ -210,7 +211,7 @@ class RelayRateLimiter:
             if now - start >= self.window_seconds:
                 count, start = 0, now
             if count >= self.limit:
-                retry = max(1, int(self.window_seconds - (now - start)))
+                retry = max(1, math.ceil(self.window_seconds - (now - start)))
                 raise HTTPException(status_code=429, detail="Rate limit exceeded", headers={"Retry-After": str(retry)})
             self._buckets[key] = (count + 1, start)
             # Prune expired buckets to keep memory bounded.
