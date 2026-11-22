@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import hmac
 from typing import Any, Literal
 
 from fastapi import FastAPI, Header, HTTPException
@@ -119,10 +120,14 @@ Lelo mode is enabled. Use a casual, playful, friend-like texting style. Prefer l
 
 
 def check_auth(authorization: str | None) -> None:
-    expected = os.environ.get("ORBIT_RELAY_TOKEN", "").strip()
-    if not expected:
-        return
-    if authorization != f"Bearer {expected}":
+    expected = os.environ.get("ORBIT_RELAY_TOKEN", "")
+    # Fail closed: unset, blank, or weak secrets must never disable authentication.
+    if not expected or not expected.strip() or len(expected) < 32:
+        raise HTTPException(status_code=503, detail="Relay authentication is not configured securely")
+    if authorization is None or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid relay token")
+    supplied = authorization[len("Bearer "):]
+    if not hmac.compare_digest(supplied, expected):
         raise HTTPException(status_code=401, detail="Invalid relay token")
 
 
