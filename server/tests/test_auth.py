@@ -268,6 +268,16 @@ def test_previous_token_rejected_after_expiry(monkeypatch):
     assert exc.value.status_code == 401
 
 
+def test_previous_token_rejected_with_non_finite_expiry(monkeypatch):
+    monkeypatch.setenv("ORBIT_RELAY_TOKEN", "p" * 32)
+    monkeypatch.setenv("ORBIT_RELAY_TOKEN_PREVIOUS", "o" * 32)
+    for expiry in ("nan", "inf", "-inf"):
+        monkeypatch.setenv("ORBIT_RELAY_TOKEN_PREVIOUS_EXPIRES_AT", expiry)
+        with pytest.raises(HTTPException) as exc:
+            check_auth("Bearer " + "o" * 32)
+        assert exc.value.status_code == 401
+
+
 def test_previous_token_rejected_without_expiry(monkeypatch):
     monkeypatch.setenv("ORBIT_RELAY_TOKEN", "p" * 32)
     monkeypatch.setenv("ORBIT_RELAY_TOKEN_PREVIOUS", "o" * 32)
