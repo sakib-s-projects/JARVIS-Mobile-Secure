@@ -747,22 +747,54 @@ public final class OrbitUpdater {
     }
 
     private static HttpURLConnection open(String value, String accept) throws Exception {
-        URL url = new URL(value);
-        if (!"https".equalsIgnoreCase(url.getProtocol())) {
-            throw new UpdateException("Orbit updates require HTTPS.");
+        URL current = new URL(value);
+        if (!isAllowedUpdateHost(current.getHost()) || !"https".equalsIgnoreCase(current.getProtocol())) {
+            throw new UpdateException("Orbit updates require an official HTTPS host.");
         }
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setConnectTimeout(15000);
-        connection.setReadTimeout(45000);
-        connection.setRequestProperty("Accept", accept);
-        connection.setRequestProperty("User-Agent", "OrbitAssistant/" + BuildConfig.VERSION_NAME + " (Android updater)");
-        return connection;
+        for (int redirects = 0; redirects <= 5; redirects++) {
+            HttpURLConnection connection = (HttpURLConnection) current.openConnection();
+            connection.setInstanceFollowRedirects(false);
+            connection.setConnectTimeout(15000);
+            connection.setReadTimeout(45000);
+            connection.setRequestProperty("Accept", accept);
+            connection.setRequestProperty("User-Agent", "OrbitAssistant/" + BuildConfig.VERSION_NAME + " (Android updater)");
+            int status = connection.getResponseCode();
+            if (status == HttpURLConnection.HTTP_MOVED_PERM ||
+                    status == HttpURLConnection.HTTP_MOVED_TEMP ||
+                    status == HttpURLConnection.HTTP_SEE_OTHER ||
+                    status == 307 || status == 308) {
+                String location = connection.getHeaderField("Location");
+                connection.disconnect();
+                if (location == null || location.trim().isEmpty() || redirects == 5) {
+                    throw new UpdateException("The update service redirect is invalid or excessive.");
+                }
+                URL next = new URL(current, location);
+                if (!"https".equalsIgnoreCase(next.getProtocol()) || !isAllowedUpdateHost(next.getHost())) {
+                    throw new UpdateException("The update service redirected to an untrusted host.");
+                }
+                current = next;
+                continue;
+            }
+            return connection;
+        }
+        throw new UpdateException("The update service redirect limit was exceeded.");
+    }
+
+    private static boolean isAllowedUpdateHost(String host) {
+        if (host == null) return false;
+        String normalized = host.toLowerCase(Locale.US);
+        return normalized.equals("github.com") || normalized.equals("api.github.com")
+                || normalized.equals("raw.githubusercontent.com")
+                || normalized.equals("release-assets.githubusercontent.com")
+                || normalized.equals("objects.githubusercontent.com")
+                || normalized.endsWith(".githubusercontent.com");
     }
 
     private static void requireHttpsFinalUrl(HttpURLConnection connection) throws Exception {
         if (connection == null || connection.getURL() == null ||
-                !"https".equalsIgnoreCase(connection.getURL().getProtocol())) {
-            throw new UpdateException("The update service redirected to an insecure URL.");
+                !"https".equalsIgnoreCase(connection.getURL().getProtocol()) ||
+                !isAllowedUpdateHost(connection.getURL().getHost())) {
+            throw new UpdateException("The update service final URL is not trusted.");
         }
     }
 
