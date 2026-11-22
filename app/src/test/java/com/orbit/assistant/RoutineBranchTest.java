@@ -193,6 +193,23 @@ public final class RoutineBranchTest {
         assertFalse(problem.isEmpty());
         assertTrue(problem.contains("nested"));
     }
+    @Test public void aConditionInsideAnElsePathIsMalformed() {
+        String problem = RoutineBranch.structureProblem(
+                chain(condition(1, 2), timer(1), timer(2), condition(1, 0), timer(3)));
+        assertFalse(problem.isEmpty());
+        assertTrue(problem.contains("nested"));
+    }
+
+    @Test public void lowerCaseConditionTypeCannotBypassWholeBranchValidation() {
+        AssistantReply.Action lowerCase = new AssistantReply.Action(
+                "if_condition", condition(1, 1).params, false);
+        assertTrue("the catalog accepts action type casing consistently",
+                RoutineActionCatalog.isValid(lowerCase));
+        assertFalse("a truncated ELSE branch must still be rejected",
+                RoutineBranch.structureValid(chain(lowerCase, timer(1))));
+        assertTrue("the condition must still be recognized as a branch",
+                RoutineConditionEvaluator.isCondition(lowerCase));
+    }
 
     @Test public void twoBranchesSideBySideAreFine() {
         assertTrue(RoutineBranch.structureValid(chain(
