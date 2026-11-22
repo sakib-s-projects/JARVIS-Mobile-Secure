@@ -239,6 +239,20 @@ def extract_json(text: str) -> dict[str, Any]:
         raise
 
 
+def filter_device_actions(actions: list[DeviceAction], capabilities: list[str], prompt: str) -> list[DeviceAction]:
+    """Only pass announced actions; browser search additionally needs explicit user intent."""
+    announced = set(capabilities)
+    q = prompt.lower().strip()
+    explicit_external_search = (
+        q.startswith("google ") or "open google" in q or "search google" in q or
+        "search the web for" in q or "open a browser" in q or "in my browser" in q
+    )
+    return [
+        action for action in actions
+        if action.type in announced and (action.type != "WEB_SEARCH" or explicit_external_search)
+    ]
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "orbit-relay"}
@@ -299,19 +313,7 @@ def assistant(req: AssistantRequest, authorization: str | None = Header(default=
         data = extract_json(raw)
         parsed = AssistantResponse.model_validate(data)
         parsed.text = parsed.text.replace(" — ", " - ").replace("—", "-")
-        # Defense in depth: only allow actions the app announced. WEB_SEARCH is
-        # an external-browser action, not Orbit's hosted in-chat lookup, so do not
-        # open a browser for ordinary current-information questions.
-        announced = set(req.capabilities)
-        q = req.prompt.lower().strip()
-        explicit_external_search = (
-            q.startswith("google ") or "open google" in q or "search google" in q or
-            "search the web for" in q or "open a browser" in q or "in my browser" in q
-        )
-        parsed.actions = [
-            a for a in parsed.actions
-            if a.type in announced and (a.type != "WEB_SEARCH" or explicit_external_search)
-        ]
+        parsed.actions = filter_device_actions(parsed.actions, req.capabilities, req.prompt)
         return parsed
     except HTTPException:
         raise
