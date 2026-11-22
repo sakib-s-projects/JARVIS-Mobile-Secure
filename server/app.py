@@ -196,7 +196,7 @@ def check_auth(authorization: str | None) -> None:
     previous_valid = False
     try:
         expires_at = float(previous_expires)
-        previous_valid = bool(previous and previous.strip() and len(previous) >= 32 and time.time() < expires_at)
+        previous_valid = bool(previous and previous.strip() and len(previous) >= 32 and math.isfinite(expires_at) and time.time() < expires_at)
     except (TypeError, ValueError):
         previous_valid = False
 
