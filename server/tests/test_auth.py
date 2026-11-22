@@ -80,3 +80,23 @@ def test_rate_limit_resets_after_window():
     limiter.check("token")
     now[0] = 160.0
     limiter.check("token")
+
+
+def test_overall_request_body_limit_returns_413():
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from app import RequestBodyLimitMiddleware
+
+    test_app = FastAPI()
+    test_app.add_middleware(RequestBodyLimitMiddleware, max_bytes=32)
+
+    @test_app.post("/assistant")
+    async def echo(request):
+        return {"size": len(await request.body())}
+
+    client = TestClient(test_app)
+    assert client.post("/assistant", content=b"x" * 32).status_code == 200
+    response = client.post("/assistant", content=b"x" * 33)
+    assert response.status_code == 413
+    assert response.json()["detail"] == "Request body too large"
+
