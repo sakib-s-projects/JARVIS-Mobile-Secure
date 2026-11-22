@@ -412,6 +412,22 @@ public final class OrbitVaultBackupTest {
                 new File(items.get(0).mediaPath).isFile());
     }
 
+    @Test public void malformedRoutineBranchInBackupIsRefused() throws Exception {
+        JSONObject root = new JSONObject(exported());
+        JSONArray routines = root.getJSONObject("data").getJSONArray("routines");
+        AssistantReply.Action condition = RoutineBranchTest.condition(1, 1);
+        JSONArray actions = new JSONArray().put(new JSONObject()
+                .put("type", condition.type)
+                .put("params", new JSONObject(condition.params.toString()))
+                .put("requiresConfirmation", false));
+        routines.put(new JSONObject()
+                .put("id", "invalid-branch-routine")
+                .put("name", "Invalid branch")
+                .put("actions", actions));
+
+        assertRefused(root.toString());
+    }
+
     // ---- helpers ---------------------------------------------------------------------------------
 
     /**
