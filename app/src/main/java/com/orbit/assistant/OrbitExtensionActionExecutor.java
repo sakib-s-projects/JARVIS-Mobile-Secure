@@ -11,7 +11,6 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.io.OutputStream;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -131,6 +130,7 @@ public final class OrbitExtensionActionExecutor {
                     .readTimeout(timeoutMs, TimeUnit.MILLISECONDS)
                     .writeTimeout(timeoutMs, TimeUnit.MILLISECONDS)
                     .callTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                    .proxy(java.net.Proxy.NO_PROXY)
                     .followRedirects(false)
                     .followSslRedirects(false)
                     .build();
@@ -169,7 +169,6 @@ public final class OrbitExtensionActionExecutor {
             return DeviceActionExecutor.Result.failed("Extension endpoint is not a public HTTPS address.");
         } catch (Exception ignored) {
             return DeviceActionExecutor.Result.failed("Extension request could not be completed.");
-        } finally {
         }
     }
 
