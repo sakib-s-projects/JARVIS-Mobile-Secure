@@ -392,3 +392,45 @@ def test_trusted_task_context_is_untrusted_and_escaped_before_prompt_use():
     escaped = escape_untrusted_context(malicious)
     assert "<" not in escaped and ">" not in escaped
     assert "&lt;/untrusted_task_context&gt;" in escaped
+
+
+
+def test_assistant_endpoint_authenticates_before_provider_and_enforces_rate_limit(monkeypatch):
+    import app as relay_app
+    from fastapi.testclient import TestClient
+    from types import SimpleNamespace
+
+    token = "r" * 40
+    monkeypatch.setenv("ORBIT_RELAY_TOKEN", token)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-placeholder-key")
+    limiter = RelayRateLimiter(limit=2, window_seconds=60, clock=lambda: 100.0)
+    monkeypatch.setattr(relay_app, "rate_limiter", limiter)
+
+    calls = []
+    def fake_create(**kwargs):
+        calls.append(kwargs)
+        return SimpleNamespace(output_text='{"text":"ok","actions":[]}')
+
+    monkeypatch.setattr(relay_app.client.responses, "create", fake_create)
+    client = TestClient(relay_app.app)
+
+    unauthorized = client.post("/assistant", json={"prompt": "hello"})
+    assert unauthorized.status_code == 401
+    assert calls == []
+
+    headers = {"Authorization": "Bearer " + token}
+    assert client.post("/assistant", json={"prompt": "hello"}, headers=headers).status_code == 200
+    assert client.post("/assistant", json={"prompt": "again"}, headers=headers).status_code == 200
+    limited = client.post("/assistant", json={"prompt": "over limit"}, headers=headers)
+    assert limited.status_code == 429
+    assert limited.headers["retry-after"] == "60"
+    assert len(calls) == 2
+
+
+def test_container_pins_single_worker_for_process_local_rate_limiter():
+    from pathlib import Path
+
+    dockerfile = (Path(__file__).resolve().parents[1] / "Dockerfile").read_text(encoding="utf-8")
+    deployment = (Path(__file__).resolve().parent.parent / "DEPLOYMENT_SECURITY.md").read_text(encoding="utf-8")
+    assert "uvicorn app:app --host 0.0.0.0 --port ${PORT} --workers 1" in dockerfile
+    assert "one worker/process" in deployment
