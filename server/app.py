@@ -137,7 +137,7 @@ def check_auth(authorization: str | None) -> None:
 
 
 class RelayRateLimiter:
-    """Process-local fixed-window limit; shared token bucket per relay instance."""
+    """Process-local fixed-window limit, shared across requests in this relay instance."""
     def __init__(self, limit: int = 12, window_seconds: int = 60, clock=time.monotonic):
         self.limit = limit
         self.window_seconds = window_seconds
