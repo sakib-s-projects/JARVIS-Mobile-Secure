@@ -43,6 +43,12 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
+      - name: Run relay authentication tests
+        run: |
+          cd server
+          python -m pip install -r requirements.txt
+          python -m pytest -q
+
       - name: Run JVM unit tests
         run: ./gradlew --no-daemon testDebugUnitTest
 
