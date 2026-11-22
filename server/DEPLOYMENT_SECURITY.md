@@ -9,7 +9,7 @@ This checklist applies to the FastAPI relay in this directory. CI tests the rela
 - Set `ORBIT_RELAY_TOKEN` to a random secret at least 32 characters long. The relay intentionally fails closed when it is absent, blank, or weak.
 - Only configure `ORBIT_RELAY_TOKEN_PREVIOUS` and `ORBIT_RELAY_TOKEN_PREVIOUS_EXPIRES_AT` for a planned rotation, and remove the previous token after the window closes.
 - Keep the container running as the non-root `relay` user (the Dockerfile sets this).
-- Use a platform or reverse proxy that enforces TLS and reasonable connection/request timeouts. Avoid logging Authorization headers, request bodies, prompt contents, or secrets.
+- The relay OpenAI client has a 45-second upstream timeout and automatic SDK retries disabled, so provider stalls do not hold the single worker indefinitely. Keep platform/reverse-proxy connection and request timeouts bounded as well. Avoid logging Authorization headers, request bodies, prompt contents, or secrets.
 - Restrict management access to the hosting account and protect environment/secrets changes with MFA where available.
 
 ## Rate-limiter scope and scaling
