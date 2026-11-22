@@ -85,13 +85,14 @@ def test_rate_limit_resets_after_window():
 def test_overall_request_body_limit_returns_413():
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
+    from starlette.requests import Request
     from app import RequestBodyLimitMiddleware
 
     test_app = FastAPI()
     test_app.add_middleware(RequestBodyLimitMiddleware, max_bytes=32)
 
     @test_app.post("/assistant")
-    async def echo(request):
+    async def echo(request: Request):
         return {"size": len(await request.body())}
 
     client = TestClient(test_app)
