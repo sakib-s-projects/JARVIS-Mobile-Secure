@@ -163,38 +163,7 @@ public final class OrbitExtensionActionExecutor {
                 return DeviceActionExecutor.Result.failed(
                         "Extension request failed (HTTP " + status + ")");
             }
-            // Split the declared total budget between connection and response read.
-            int timeoutMs = Math.max(1000, action.timeoutSeconds * 500);
-            connection.setConnectTimeout(timeoutMs);
-            connection.setReadTimeout(timeoutMs);
-            connection.setInstanceFollowRedirects(false);
-            connection.setUseCaches(false);
-            connection.setRequestMethod(action.method);
-            connection.setRequestProperty("Accept", "application/json, text/plain;q=0.8, */*;q=0.2");
-            connection.setRequestProperty("User-Agent", "Orbit-Assistant/" + BuildConfig.VERSION_NAME);
-            for (Map.Entry<String, String> header : renderedHeaders.entrySet())
-                connection.setRequestProperty(header.getKey(), header.getValue());
-            if ("POST".equals(action.method)) {
-                connection.setDoOutput(true);
-                connection.setFixedLengthStreamingMode(body.length);
-                if (!containsHeader(renderedHeaders, "Content-Type"))
-                    connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-                try (OutputStream output = connection.getOutputStream()) {
-                    output.write(body);
-                }
-            }
-
-            if (status >= 200 && status < 300) {
-                return DeviceActionExecutor.Result.success(
-                        "Extension request succeeded (HTTP " + status + ")");
-            }
-            if (status >= 300 && status < 400) {
-                return DeviceActionExecutor.Result.failed(
-                        "Extension request stopped at an unreviewed redirect (HTTP " + status + ")");
-            }
-            return DeviceActionExecutor.Result.failed(
-                    "Extension request failed (HTTP " + status + ")");
-        } catch (ResponseTooLargeException ignored) {
+} catch (ResponseTooLargeException ignored) {
             return DeviceActionExecutor.Result.failed("Extension response exceeded Orbit's safe size limit.");
         } catch (IllegalArgumentException ignored) {
             return DeviceActionExecutor.Result.failed("Extension endpoint is not a public HTTPS address.");
