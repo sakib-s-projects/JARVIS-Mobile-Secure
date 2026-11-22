@@ -20,10 +20,68 @@ import threading
 from typing import Any, Literal
 
 from fastapi import FastAPI, Header, HTTPException
+from starlette.responses import JSONResponse
 from pydantic import BaseModel, Field
 from openai import OpenAI
 
 app = FastAPI(title="Orbit Relay", version="0.1.0")
+MAX_ASSISTANT_BODY_BYTES = 6 * 1024 * 1024
+
+
+class RequestBodyLimitMiddleware:
+    """Bound and buffer /assistant bodies before forwarding to FastAPI."""
+    def __init__(self, app, max_bytes: int = MAX_ASSISTANT_BODY_BYTES):
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") != "http" or scope.get("path") != "/assistant":
+            await self.app(scope, receive, send)
+            return
+
+        headers = dict(scope.get("headers", [])))
+        raw_length = headers.get(b"content-length")
+        if raw_length:
+            try:
+                if int(raw_length) > self.max_bytes:
+                    response = JSONResponse({"detail": "Request body too large"}, status_code=413)
+                    await response(scope, receive, send)
+                    return
+            except ValueError:
+                response = JSONResponse({"detail": "Invalid Content-Length"}, status_code=400)
+                await response(scope, receive, send)
+                return
+
+
+        body_chunks = []
+        total = 0
+        while True:
+            message = await receive()
+            if message.get("type") != "http.request":
+                continue
+            chunk = message.get("body", b"")
+            total += len(chunk)
+            if total > self.max_bytes:
+                response = JSONResponse({"detail": "Request body too large"}, status_code=413)
+                await response(scope, receive, send)
+                return
+            body_chunks.append(chunk)
+            if not message.get("more_body", False):
+                break
+
+        body = b"".join(body_chunks)
+        delivered = False
+        async def replay_receive():
+            nonlocal delivered
+            if not delivered:
+                delivered = True
+                return {"type": "http.request", "body": body, "more_body": False}
+            return await receive()
+        await self.app(scope, replay_receive, send)
+
+
+
+app.add_middleware(RequestBodyLimitMiddleware)
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 ALLOWED_MODELS = {"gpt-6-luna", "gpt-6.1-sol", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.6"}
