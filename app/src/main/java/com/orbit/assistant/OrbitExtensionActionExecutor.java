@@ -12,14 +12,19 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.MediaType;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /** Executes only validated declarative URL and HTTPS capabilities from Extensions v1/v2. */
 public final class OrbitExtensionActionExecutor {
@@ -76,7 +81,7 @@ public final class OrbitExtensionActionExecutor {
     private static DeviceActionExecutor.Result executeHttps(Context context,
             OrbitExtensionStore.Installed installed, OrbitExtension.Action action,
             AssistantReply.Action routineAction) {
-        HttpURLConnection connection = null;
+        
         try {
             Map<String, String> configuration = installed.extension.schemaVersion ==
                     OrbitExtension.SCHEMA_VERSION_V2
@@ -119,7 +124,45 @@ public final class OrbitExtensionActionExecutor {
                 renderedHeaders.put(header.name, value);
             }
 
-            connection = (HttpURLConnection) new URL(finalUrl).openConnection();
+            int timeoutMs = Math.max(1000, action.timeoutSeconds * 1000);
+            OkHttpClient client = new OkHttpClient.Builder()
+                    .dns(new OrbitPublicDns())
+                    .connectTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                    .readTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                    .writeTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                    .callTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                    .followRedirects(false)
+                    .followSslRedirects(false)
+                    .build();
+            Request.Builder requestBuilder = new Request.Builder().url(finalUrl)
+                    .header("Accept", "application/json, text/plain;q=0.8, */*;q=0.2")
+                    .header("User-Agent", "Orbit-Assistant/" + BuildConfig.VERSION_NAME);
+            for (Map.Entry<String, String> header : renderedHeaders.entrySet())
+                requestBuilder.header(header.getKey(), header.getValue());
+            if ("POST".equals(action.method)) {
+                MediaType jsonType = MediaType.parse("application/json; charset=utf-8");
+                RequestBody requestBody = RequestBody.create(body, jsonType);
+                if (!containsHeader(renderedHeaders, "Content-Type"))
+                    requestBuilder.header("Content-Type", "application/json; charset=utf-8");
+                requestBuilder.post(requestBody);
+            } else {
+                requestBuilder.get();
+            }
+            try (Response response = client.newCall(requestBuilder.build()).execute()) {
+                int status = response.code();
+                ResponseBody responseBody = response.body();
+                if (responseBody != null) readBounded(responseBody.byteStream(), OrbitExtension.MAX_RESPONSE_BYTES);
+                if (status >= 200 && status < 300) {
+                    return DeviceActionExecutor.Result.success(
+                            "Extension request succeeded (HTTP " + status + ")");
+                }
+                if (status >= 300 && status < 400) {
+                    return DeviceActionExecutor.Result.failed(
+                            "Extension request stopped at an unreviewed redirect (HTTP " + status + ")");
+                }
+                return DeviceActionExecutor.Result.failed(
+                        "Extension request failed (HTTP " + status + ")");
+            }
             // Split the declared total budget between connection and response read.
             int timeoutMs = Math.max(1000, action.timeoutSeconds * 500);
             connection.setConnectTimeout(timeoutMs);
@@ -140,10 +183,7 @@ public final class OrbitExtensionActionExecutor {
                     output.write(body);
                 }
             }
-            int status = connection.getResponseCode();
-            InputStream input = status >= 200 && status < 400
-                    ? connection.getInputStream() : connection.getErrorStream();
-            if (input != null) readBounded(input, OrbitExtension.MAX_RESPONSE_BYTES);
+
             if (status >= 200 && status < 300) {
                 return DeviceActionExecutor.Result.success(
                         "Extension request succeeded (HTTP " + status + ")");
@@ -161,7 +201,6 @@ public final class OrbitExtensionActionExecutor {
         } catch (Exception ignored) {
             return DeviceActionExecutor.Result.failed("Extension request could not be completed.");
         } finally {
-            if (connection != null) connection.disconnect();
         }
     }
 
