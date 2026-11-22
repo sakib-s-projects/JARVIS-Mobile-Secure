@@ -1,0 +1,91 @@
+name: Claude H-3 Security Audit
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: claude-h3-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout audit target
+        uses: actions/checkout@v4
+        with:
+          ref: jarvis-branding
+
+      - name: Run Claude read-only source audit
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, subprocess, json, urllib.request, urllib.error, datetime, textwrap
+
+          key = os.environ.get("ANTHROPIC_API_KEY")
+          if not key:
+              raise SystemExit("Missing repository secret ANTHROPIC_API_KEY. Add it in Settings > Secrets and variables > Actions.")
+          tracked = subprocess.check_output(["git", "ls-files"], text=True).splitlines()
+          allowed_ext = {".java",".kt",".xml",".gradle",".kts",".yml",".yaml",".json",".js",".ts",".tsx",".html",".md",".properties",".toml",".sh"}
+          files=[]
+          for name in tracked:
+              p=pathlib.Path(name)
+              if p.suffix.lower() not in allowed_ext or any(part in {".git","build","dist","node_modules"} for part in p.parts):
+                  continue
+              if p.name.lower() in {"gradle.lockfile"}: continue
+              try:
+                  raw=p.read_text(errors="replace")
+              except Exception: continue
+              if len(raw)>40000:
+                  raw=raw[:40000]+"\n[TRUNCATED: file exceeds 40k characters; inspect remaining content separately]"
+              files.append((name,raw))
+          batches=[]; cur=[]; size=0
+          for f in files:
+              n=len(f[0])+len(f[1])
+              if cur and size+n>55000:
+                  batches.append(cur); cur=[]; size=0
+              cur.append(f); size+=n
+          if cur: batches.append(cur)
+          if not batches: raise SystemExit("No source files selected for audit.")
+
+          def ask(prompt, max_tokens=4500):
+              body={"model":"claude-sonnet-4-5-20250929","max_tokens":max_tokens,
+                    "messages":[{"role":"user","content":prompt}]}
+              req=urllib.request.Request("https://api.anthropic.com/v1/messages",
+                  data=json.dumps(body).encode(),headers={"x-api-key":key,"anthropic-version":"2023-06-01","content-type":"application/json"})
+              with urllib.request.urlopen(req,timeout=180) as res:
+                  data=json.loads(res.read())
+              return "\n".join(x.get("text","") for x in data.get("content",[]) if x.get("type")=="text")
+
+          instructions="""You are an expert mobile Android security auditor conducting the H-3 audit of this repository.
+Perform evidence-based source audit ONLY. Do not edit files, suggest running destructive commands, access secrets, or claim tests/runtime exploits were executed.
+Inspect the supplied files carefully. Prioritize security/privacy and correctness: Android manifest/exported components/permissions, authentication/authorization, secrets, input validation, injection, SSRF/DNS rebinding, networking/TLS/redirects, rate limiting, Relay deployment configuration, backup/restore integrity/atomicity, data loss, routines/branch validation, extension/plugin actions, notifications/reminders, widgets/receivers, storage/file paths, concurrency, error handling, dependency/workflow supply chain, CI permissions, and regression gaps.
+For every finding give: stable ID (H3-C...), severity (Critical/High/Medium/Low/Info), exact file and line(s), evidence, impact, reproducible verification steps (non-destructive), and concrete remediation. Distinguish confirmed code defects from plausible risks. If no finding, state what was inspected and limits. Avoid duplicates across files/batches."""
+          reports=[]
+          for i,batch in enumerate(batches,1):
+              payload="\n\n".join(f"===== FILE: {name} =====\n{src}" for name,src in batch)
+              result=ask(instructions+f"\nAudit batch {i}/{len(batches)}. Return findings only for this batch, plus notable cross-file questions.\n\n"+payload)
+              reports.append(f"# Batch {i}/{len(batches)}\n\nFiles: "+", ".join(x[0] for x in batch)+"\n\n"+result)
+          final_prompt="""Consolidate these audit notes into one H-3 security audit report. Deduplicate findings; preserve exact evidence/locations; separate confirmed defects from potential risks; prioritize remediation. Include Executive Summary, scope/files reviewed, findings table (ID/severity/file/status), detailed findings with remediation, areas with no findings, audit limitations, and a recommended remediation order. Do not claim tests were run; these are AI source-review results. If evidence is insufficient, label it unverified.\n\n"""+"\n\n".join(reports)
+          final=ask(final_prompt, max_tokens=8000)
+          stamp=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+          out=f"# Claude H-3 Security Audit\n\n- Repository: {os.environ.get('GITHUB_REPOSITORY')}\n- Branch: jarvis-branding\n- Audit date: {stamp}\n- Source files inspected: {len(files)}\n- Audit batches: {len(batches)}\n- Mode: Read-only source review (no runtime tests)\n\n"+final+"\n\n## Batch-level review notes\n\n"+"\n\n".join(reports)
+          pathlib.Path("claude-h3-audit-report.md").write_text(out)
+          print("Claude audit report generated.")
+          PY
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-h3-audit-report
+          path: claude-h3-audit-report.md
+          if-no-files-found: warn
+          retention-days: 30
