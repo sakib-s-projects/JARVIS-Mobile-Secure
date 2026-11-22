@@ -171,3 +171,14 @@ def test_rate_limit_retry_after_near_window_end():
         limiter.check("token")
     assert exc.value.status_code == 429
     assert exc.value.headers["Retry-After"] == "1"
+
+
+def test_rate_limit_retry_after_rounds_up():
+    now = [100.0]
+    limiter = RelayRateLimiter(limit=1, window_seconds=60, clock=lambda: now[0])
+    limiter.check("token")
+    now[0] = 158.1  # 1.9 seconds remain, must advise 2 seconds
+    with pytest.raises(HTTPException) as exc:
+        limiter.check("token")
+    assert exc.value.status_code == 429
+    assert exc.value.headers["Retry-After"] == "2"
