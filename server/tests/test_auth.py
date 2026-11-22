@@ -285,3 +285,23 @@ def test_previous_token_rejected_without_expiry(monkeypatch):
     with pytest.raises(HTTPException) as exc:
         check_auth("Bearer " + "o" * 32)
     assert exc.value.status_code == 401
+
+
+def test_previous_token_rejected_when_blank_or_weak(monkeypatch):
+    monkeypatch.setenv("ORBIT_RELAY_TOKEN", "p" * 32)
+    monkeypatch.setenv("ORBIT_RELAY_TOKEN_PREVIOUS_EXPIRES_AT", "200")
+    for previous in ("", " " * 40, "short", "o" * 31):
+        monkeypatch.setenv("ORBIT_RELAY_TOKEN_PREVIOUS", previous)
+        with pytest.raises(HTTPException) as exc:
+            check_auth("Bearer " + (previous if previous.strip() else "x" * 32))
+        assert exc.value.status_code == 401
+
+
+def test_primary_token_remains_valid_during_rotation(monkeypatch):
+    import app
+    primary = "p" * 32
+    monkeypatch.setenv("ORBIT_RELAY_TOKEN", primary)
+    monkeypatch.setenv("ORBIT_RELAY_TOKEN_PREVIOUS", "o" * 32)
+    monkeypatch.setenv("ORBIT_RELAY_TOKEN_PREVIOUS_EXPIRES_AT", "1")
+    monkeypatch.setattr(app.time, "time", lambda: 100.0)
+    check_auth("Bearer " + primary)
