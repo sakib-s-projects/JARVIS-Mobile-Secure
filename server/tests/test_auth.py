@@ -1,6 +1,6 @@
 import os\nimport pytest
 
-os.environ.setdefault("OPENAI_API_KEY", "test-placeholder-key")
+os.environ.setdefault("OPENAI_API_KEY", "sk-test-placeholder-key")
 from fastapi import HTTPException
 from app import check_auth
 
