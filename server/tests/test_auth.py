@@ -1,8 +1,11 @@
-import os\nimport pytest
-
+import os
 os.environ.setdefault("OPENAI_API_KEY", "sk-test-placeholder-key")
+
+import pytest
 from fastapi import HTTPException
-from app import check_auth
+from pydantic import ValidationError
+
+from app import check_auth, AssistantRequest, RelayRateLimiter
 
 
 def test_missing_token_fails_closed(monkeypatch):
@@ -46,19 +49,34 @@ def test_correct_token_accepted(monkeypatch):
     check_auth("Bearer " + token)
 
 
-from pydantic import ValidationError
-from app import AssistantRequest
-
-
 def test_request_metadata_limits():
     with pytest.raises(ValidationError):
-        AssistantRequest(prompt='ok', timezone='x' * 129)
+        AssistantRequest(prompt="ok", timezone="x" * 129)
     with pytest.raises(ValidationError):
-        AssistantRequest(prompt='ok', locale='x' * 65)
+        AssistantRequest(prompt="ok", locale="x" * 65)
     with pytest.raises(ValidationError):
-        AssistantRequest(prompt='ok', capabilities=['cap'] * 33)
+        AssistantRequest(prompt="ok", capabilities=["cap"] * 33)
 
 
 def test_screenshot_payload_limit():
     with pytest.raises(ValidationError):
-        AssistantRequest(prompt='ok', screenshotBase64='x' * (4 * 1024 * 1024 + 1))
+        AssistantRequest(prompt="ok", screenshotBase64="x" * (4 * 1024 * 1024 + 1))
+
+
+def test_rate_limit_blocks_over_limit_and_returns_retry_after():
+    now = [100.0]
+    limiter = RelayRateLimiter(limit=2, window_seconds=60, clock=lambda: now[0])
+    limiter.check("token")
+    limiter.check("token")
+    with pytest.raises(HTTPException) as exc:
+        limiter.check("token")
+    assert exc.value.status_code == 429
+    assert exc.value.headers["Retry-After"] == "60"
+
+
+def test_rate_limit_resets_after_window():
+    now = [100.0]
+    limiter = RelayRateLimiter(limit=1, window_seconds=60, clock=lambda: now[0])
+    limiter.check("token")
+    now[0] = 160.0
+    limiter.check("token")
