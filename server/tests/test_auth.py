@@ -101,3 +101,43 @@ def test_overall_request_body_limit_returns_413():
     assert response.status_code == 413
     assert response.json()["detail"] == "Request body too large"
 
+
+
+
+def test_chunked_request_body_limit_rejects_oversized_stream():
+    import asyncio
+    from app import RequestBodyLimitMiddleware
+
+    chunks = [
+        {"type": "http.request", "body": b"x" * 20, "more_body": True},
+        {"type": "http.request", "body": b"x" * 13, "more_body": False},
+    ]
+    delivered = []
+    async def receive():
+        return chunks.pop(0)
+    async def send(message):
+        delivered.append(message)
+    async def downstream(scope, receive, send):
+        raise AssertionError("oversized body must be rejected before downstream")
+
+    scope = {"type": "http", "method": "POST", "path": "/assistant", "headers": []}
+    asyncio.run(RequestBodyLimitMiddleware(downstream, max_bytes=32)(scope, receive, send))
+    assert delivered[0]["status"] == 413
+
+
+def test_content_length_precheck_rejects_without_reading_body():
+    import asyncio
+    from app import RequestBodyLimitMiddleware
+
+    delivered = []
+    async def receive():
+        raise AssertionError("body must not be read when Content-Length exceeds limit")
+    async def send(message):
+        delivered.append(message)
+    async def downstream(scope, receive, send):
+        raise AssertionError("oversized body must be rejected before downstream")
+
+    scope = {"type": "http", "method": "POST", "path": "/assistant",
+             "headers": [(b"content-length", b"33")]}
+    asyncio.run(RequestBodyLimitMiddleware(downstream, max_bytes=32)(scope, receive, send))
+    assert delivered[0]["status"] == 413
