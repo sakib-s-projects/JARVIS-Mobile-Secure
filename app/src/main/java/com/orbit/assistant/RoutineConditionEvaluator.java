@@ -36,7 +36,8 @@ public final class RoutineConditionEvaluator {
     private RoutineConditionEvaluator() {}
 
     public static boolean isCondition(AssistantReply.Action action) {
-        return action != null && RoutineActionCatalog.IF_CONDITION.equals(action.type);
+        return action != null && action.type != null &&
+                RoutineActionCatalog.IF_CONDITION.equalsIgnoreCase(action.type.trim());
     }
 
     public static int gatedSteps(AssistantReply.Action action) {
