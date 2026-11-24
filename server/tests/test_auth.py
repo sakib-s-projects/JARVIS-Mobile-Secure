@@ -442,3 +442,22 @@ def test_openai_client_has_bounded_timeout_and_no_automatic_retries():
     assert relay_app.client.timeout == relay_app.UPSTREAM_TIMEOUT_SECONDS
     assert relay_app.UPSTREAM_TIMEOUT_SECONDS == 45.0
     assert relay_app.client.max_retries == 0
+
+
+def test_jarvis_relay_token_name_is_supported(monkeypatch):
+    monkeypatch.delenv("ORBIT_RELAY_TOKEN", raising=False)
+    token = "j" * 40
+    monkeypatch.setenv("JARVIS_RELAY_TOKEN", token)
+    check_auth("Bearer " + token)
+
+
+def test_legacy_relay_token_remains_supported(monkeypatch):
+    monkeypatch.delenv("JARVIS_RELAY_TOKEN", raising=False)
+    token = "o" * 40
+    monkeypatch.setenv("ORBIT_RELAY_TOKEN", token)
+    check_auth("Bearer " + token)
+
+
+def test_health_endpoint_uses_jarvis_service_identity():
+    from app import health
+    assert health() == {"status": "ok", "service": "jarvis-relay"}
