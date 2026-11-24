@@ -145,7 +145,7 @@ public final class ReleaseWorkflowAuditTest {
         String yaml = workflow();
         contains(yaml, "display_name=\"${base_version} Beta ${beta_number}\"",
                 "a Beta release is titled JARVIS Assistant v<version> Beta <n>");
-        contains(yaml, "--title \"Orbit Assistant v${{ steps.source.outputs.display_name }}\"",
+        contains(yaml, "--title \"JARVIS Assistant v${{ steps.source.outputs.display_name }}\"",
                 "the published title must use that readable name");
     }
 
