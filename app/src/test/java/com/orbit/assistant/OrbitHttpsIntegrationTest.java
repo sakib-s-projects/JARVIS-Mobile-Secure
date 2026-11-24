@@ -7,6 +7,8 @@ import okhttp3.Dns;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import okhttp3.tls.HandshakeCertificates;
+import okhttp3.tls.HeldCertificate;
 import org.junit.Test;
 import java.net.InetAddress;
 import java.util.Collections;
@@ -23,9 +25,19 @@ public class OrbitHttpsIntegrationTest {
         return hostname -> Collections.singletonList(InetAddress.getByName("127.0.0.1"));
     }
 
-    private static OkHttpClient client(boolean followRedirects) {
+    private static HandshakeCertificates certificates() {
+        HeldCertificate certificate = new HeldCertificate.Builder()
+                .addSubjectAlternativeName("localhost")
+                .addSubjectAlternativeName("127.0.0.1")
+                .build();
+        return new HandshakeCertificates.Builder().heldCertificate(certificate).build();
+    }
+
+    private static OkHttpClient client(boolean followRedirects, HandshakeCertificates certificates) {
+        javax.net.ssl.X509TrustManager trustManager = certificates.trustManager();
         return new OkHttpClient.Builder()
                 .dns(loopbackDns())
+                .sslSocketFactory(certificates.sslSocketFactory(), trustManager)
                 .proxy(java.net.Proxy.NO_PROXY)
                 .followRedirects(followRedirects)
                 .followSslRedirects(false)
@@ -36,12 +48,13 @@ public class OrbitHttpsIntegrationTest {
 
     @Test public void pinnedDnsSocketConnectAndValidTlsHostnamePass() throws Exception {
         try (MockWebServer server = new MockWebServer()) {
-            server.useHttps(MockWebServer.sslSocketFactory());
+            HandshakeCertificates certificates = certificates();
+            server.useHttps(certificates.sslSocketFactory(), false);
             server.enqueue(new MockResponse().setResponseCode(200).setBody("ok"));
             server.start();
             String url = server.url("/socket-check").toString().replace("127.0.0.1", "localhost");
             Request request = new Request.Builder().url(url).build();
-            try (Response response = client(false).newCall(request).execute()) {
+            try (Response response = client(false, certificates).newCall(request).execute()) {
                 assertEquals(200, response.code());
                 assertEquals("ok", response.body().string());
             }
