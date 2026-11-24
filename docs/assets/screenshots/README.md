@@ -1,6 +1,6 @@
 # Public screenshot guide
 
-This folder holds the real Orbit screenshots used in the public README gallery.
+This folder holds the existing upstream Orbit screenshots used in the public README gallery.
 
 ## Current gallery files and order
 
@@ -8,11 +8,11 @@ Keep the current images in this order:
 
 | Order | Filename | Show | README caption |
 | --- | --- | --- | --- |
-| 1 | `overlay.jpg` | Orbit invoked over a neutral background through the assistant/Side-button flow | Orbit over any app |
+| 1 | `overlay.jpg` | JARVIS invoked over a neutral background through the assistant/Side-button flow | JARVIS over any app |
 | 2 | `chat.jpg` | A complete conversation with a representative response and composer | Full conversations |
-| 3 | `deck.jpg` | A deliberate mix of Orbit Deck shortcuts and controls | Your command center |
-| 4 | `documents.png` | A fictional Orbit test PDF page in the viewer with the Ask Orbit entry point | Work with documents |
-| 5 | `theme-studio.jpg` | The Theme Studio live preview and color controls | Make Orbit yours |
+| 3 | `deck.jpg` | A deliberate mix of JARVIS Deck shortcuts and controls | Your command center |
+| 4 | `documents.png` | A fictional JARVIS test PDF page in the viewer with the Ask JARVIS entry point | Work with documents |
+| 5 | `theme-studio.jpg` | The Theme Studio live preview and color controls | Make JARVIS yours |
 
 Replace the Theme Studio image later if the interface changes materially, but do not fabricate a newer state.
 
@@ -24,7 +24,7 @@ Replace the Theme Studio image later if the interface changes materially, but do
 - Format: high-quality JPEG or optimized PNG. Aim for clear text without committing unnecessarily large files.
 - Capture the real application. Do not composite features into a screen that never existed.
 - Keep system bars when they help establish genuine Android integration; otherwise crop only empty outer device chrome. Do not crop away UI that changes the meaning of the interaction.
-- Use one clean Orbit theme and consistent font, accent, display scale, and navigation style across the set. A restrained dark or AMOLED presentation fits the repository treatment.
+- Use one clean JARVIS theme and consistent font, accent, display scale, and navigation style across the set. A restrained dark or AMOLED presentation fits the repository treatment.
 - Keep content short enough to read at README width. Prefer one obvious capability per image.
 
 ## Privacy checklist
@@ -42,4 +42,4 @@ Before committing each screenshot:
 
 Use the same capture device or viewport where possible. Keep the subject at a similar scale and avoid mixing framed device mockups with raw screenshots. The first three images (overlay, chat, and Deck) should remain the strongest product story if the gallery is reduced.
 
-Keep the gallery current when a major interface change makes a screenshot misleading. Use real Orbit UI, preserve the native aspect ratio, avoid fabricated mockups or device frames, and update the README caption when the visible capability changes.
+These existing upstream screenshots are reference captures, not proof of the current JARVIS interface. Replace them only with genuine, privacy-reviewed JARVIS captures; do not relabel old screenshots as newly captured JARVIS UI. Use real JARVIS UI, preserve the native aspect ratio, avoid fabricated mockups or device frames, and update the README caption when the visible capability changes.
