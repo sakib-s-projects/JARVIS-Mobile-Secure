@@ -30,7 +30,11 @@ public class OrbitHttpsIntegrationTest {
                 .addSubjectAlternativeName("localhost")
                 .addSubjectAlternativeName("127.0.0.1")
                 .build();
-        return new HandshakeCertificates.Builder().heldCertificate(certificate).build();
+        // Trust only this test certificate; keep OkHttp's default hostname verifier enabled.
+        return new HandshakeCertificates.Builder()
+                .heldCertificate(certificate)
+                .addTrustedCertificate(certificate.certificate())
+                .build();
     }
 
     private static OkHttpClient client(boolean followRedirects, HandshakeCertificates certificates) {
@@ -77,7 +81,7 @@ public class OrbitHttpsIntegrationTest {
                 client(false, certificates).newCall(new Request.Builder().url(url).build()).execute().close();
                 fail("TLS hostname mismatch must fail");
             } catch (javax.net.ssl.SSLPeerUnverifiedException expected) {
-                // OkHttp default hostname verification is active.
+                // Certificate chain is trusted, so this specifically proves hostname verification.
             }
             assertNull("TLS request must not reach application handler",
                     server.takeRequest(500, TimeUnit.MILLISECONDS));
