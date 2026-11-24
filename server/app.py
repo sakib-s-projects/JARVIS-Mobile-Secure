@@ -286,7 +286,7 @@ def health() -> dict[str, str]:
 @app.post("/assistant", response_model=AssistantResponse)
 def assistant(req: AssistantRequest, authorization: str | None = Header(default=None)) -> AssistantResponse:
     check_auth(authorization)
-    token_key = hashlib.sha256(os.environ.get("JARVIS_RELAY_TOKEN", "").encode()).hexdigest()
+    token_key = hashlib.sha256(os.environ.get("JARVIS_RELAY_TOKEN", os.environ.get("ORBIT_RELAY_TOKEN", "")).encode()).hexdigest()
     rate_limiter.check(token_key)
     if not os.environ.get("OPENAI_API_KEY"):
         raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not configured on the relay")
