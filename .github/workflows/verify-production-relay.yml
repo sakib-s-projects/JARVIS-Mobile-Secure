@@ -21,7 +21,7 @@ jobs:
         run: |
           set +x
           if [ -z "$RELAY_BASE_URL" ] || [ -z "$RELAY_TOKEN" ]; then
-            echo "::error::Set JARVIS_RELAY_BASE_URL and JARVIS_RELAY_TOKEN in repository Actions secrets."
+            echo "::error::Set ORBIT_RELAY_BASE_URL and ORBIT_RELAY_TOKEN in repository Actions secrets."
             exit 1
           fi
           if [ "${#RELAY_TOKEN}" -lt 32 ]; then
@@ -42,12 +42,12 @@ jobs:
           PY
           echo "Required secrets are present and the relay URL passes HTTPS validation."
         env:
-          RELAY_BASE_URL: ${{ secrets.JARVIS_RELAY_BASE_URL }}
-          RELAY_TOKEN: ${{ secrets.JARVIS_RELAY_TOKEN }}
+          RELAY_BASE_URL: ${{ secrets.ORBIT_RELAY_BASE_URL }}
+          RELAY_TOKEN: ${{ secrets.ORBIT_RELAY_TOKEN }}
 
       - name: Verify public health endpoint
         env:
-          RELAY_BASE_URL: ${{ secrets.JARVIS_RELAY_BASE_URL }}
+          RELAY_BASE_URL: ${{ secrets.ORBIT_RELAY_BASE_URL }}
         shell: bash
         run: |
           set +x
@@ -70,7 +70,7 @@ jobs:
 
       - name: Verify missing-token requests are rejected
         env:
-          RELAY_BASE_URL: ${{ secrets.JARVIS_RELAY_BASE_URL }}
+          RELAY_BASE_URL: ${{ secrets.ORBIT_RELAY_BASE_URL }}
         shell: bash
         run: |
           set +x
@@ -84,7 +84,7 @@ jobs:
 
       - name: Verify invalid-token requests are rejected
         env:
-          RELAY_BASE_URL: ${{ secrets.JARVIS_RELAY_BASE_URL }}
+          RELAY_BASE_URL: ${{ secrets.ORBIT_RELAY_BASE_URL }}
         shell: bash
         run: |
           set +x
