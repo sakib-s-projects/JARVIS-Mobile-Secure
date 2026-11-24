@@ -1,4 +1,4 @@
-name: Release Orbit APK
+name: Release JARVIS APK
 
 on:
   push:
@@ -80,7 +80,7 @@ jobs:
           fi
 
           echo "Release channel: ${release_channel}"
-          echo "Release title: Orbit Assistant v${display_name}"
+          echo "Release title: JARVIS Assistant v${display_name}"
           echo "version_name=${source_version_name}" >> "${GITHUB_OUTPUT}"
           echo "version_code=${source_version_code}" >> "${GITHUB_OUTPUT}"
           echo "display_name=${display_name}" >> "${GITHUB_OUTPUT}"
@@ -193,7 +193,7 @@ jobs:
           # component that fails any of these, so publishing one would be publishing a dead asset.
           component_apk="local/build/outputs/apk/release/local-release.apk"
           if [[ ! -f "${component_apk}" ]]; then
-            echo "::error::Orbit Local component APK was not produced."
+            echo "::error::JARVIS Local component APK was not produced."
             exit 1
           fi
           component_line="$("${aapt}" dump badging "${component_apk}" | grep -m 1 '^package:')"
@@ -201,12 +201,12 @@ jobs:
           component_version_code="$(awk -F"'" '{print $4}' <<< "${component_line}")"
           component_version_name="$(awk -F"'" '{print $6}' <<< "${component_line}")"
           if [[ "${component_package}" != "${EXPECTED_COMPONENT_PACKAGE_NAME}" ]]; then
-            echo "::error::Orbit Local component package name verification failed."
+            echo "::error::JARVIS Local component package name verification failed."
             exit 1
           fi
           if [[ "${component_version_name}" != "${EXPECTED_VERSION_NAME}" ||
                 "${component_version_code}" != "${EXPECTED_VERSION_CODE}" ]]; then
-            echo "::error::Orbit Local component version verification failed."
+            echo "::error::JARVIS Local component version verification failed."
             exit 1
           fi
           component_report="${RUNNER_TEMP}/orbit-local-apksigner-report.txt"
@@ -215,11 +215,11 @@ jobs:
           component_cert="$(grep -iF 'certificate SHA-256 digest:' "${component_report}" | head -n 1 | sed 's/.*digest:[[:space:]]*//' || true)"
           normalized_component_cert="$(tr -d ':' <<< "${component_cert}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
           if [[ "${component_signers}" != '1' ]]; then
-            echo "::error::Orbit Local component signer-count verification failed."
+            echo "::error::JARVIS Local component signer-count verification failed."
             exit 1
           fi
           if [[ "${normalized_component_cert}" != "${normalized_expected_cert}" ]]; then
-            echo "::error::Orbit Local component signing certificate verification failed."
+            echo "::error::JARVIS Local component signing certificate verification failed."
             exit 1
           fi
 
@@ -332,13 +332,13 @@ jobs:
                   continue
               break
 
-          notes = f'## Orbit Assistant v{display}\n\n{summary}\n\n'
+          notes = f'## JARVIS Assistant v{display}\n\n{summary}\n\n'
           if bullets:
               notes += "### What's new\n\n"
               notes += ''.join(f'- {bullet}\n' for bullet in bullets)
               notes += '\n'
           notes += (
-              'This APK is signed with Orbit Assistant\'s permanent release certificate. '
+              'This JARVIS APK uses the existing trusted Android signing certificate. '
               'The attached `.sha256` file can be used to verify the APK download.\n'
           )
 
@@ -390,7 +390,7 @@ jobs:
             --repo "${GITHUB_REPOSITORY}" \
             --verify-tag \
             --draft \
-            --title "Orbit Assistant v${{ steps.source.outputs.display_name }}" \
+            --title "JARVIS Assistant v${{ steps.source.outputs.display_name }}" \
             --notes-file "${{ steps.notes.outputs.notes_path }}" \
             "${prerelease_args[@]}"
           for asset in \
