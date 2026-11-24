@@ -144,16 +144,16 @@ public final class ReleaseWorkflowAuditTest {
     @Test public void theReleaseTitleUsesTheReadableBuildName() {
         String yaml = workflow();
         contains(yaml, "display_name=\"${base_version} Beta ${beta_number}\"",
-                "a Beta release is titled Orbit Assistant v<version> Beta <n>");
+                "a Beta release is titled JARVIS Assistant v<version> Beta <n>");
         contains(yaml, "--title \"Orbit Assistant v${{ steps.source.outputs.display_name }}\"",
                 "the published title must use that readable name");
     }
 
     /** The workflow's title format and Orbit's own must produce the same string. */
     @Test public void theTitleFormatMatchesOrbitsHelper() {
-        assertTrue(OrbitVersion.releaseTitle("0.7.7.4").equals("Orbit Assistant v0.7.7.4"));
+        assertTrue(OrbitVersion.releaseTitle("0.7.7.4").equals("JARVIS Assistant v0.7.7.4"));
         assertTrue(OrbitVersion.releaseTitle("0.7.7.5-beta.1")
-                .equals("Orbit Assistant v0.7.7.5 Beta 1"));
+                .equals("JARVIS Assistant v0.7.7.5 Beta 1"));
     }
 
     // ---- verification that must never be weakened ----------------------------------------------------
@@ -202,7 +202,7 @@ public final class ReleaseWorkflowAuditTest {
                 "notes are keyed by the exact versionName, Beta suffix included");
         contains(yaml, "No CHANGELOG.md entry found for v", "a missing entry fails the release");
         contains(yaml, "if body_words > 200:", "release notes stay concise");
-        contains(yaml, "notes = f'## Orbit Assistant v{display}", "the heading uses the readable name");
+        contains(yaml, "notes = f'## JARVIS Assistant v{display}", "the heading uses the readable name");
     }
 
     /** The changelog entry this very release will be published from must already exist. */
