@@ -1,6 +1,6 @@
-name: Candidate Orbit APK
+name: Candidate JARVIS APK
 
-# Builds an installable, permanently signed Orbit APK from a candidate branch so a device-specific
+# Builds an installable, permanently signed JARVIS APK from a candidate branch so a device-specific
 # interaction fix can be tested on real hardware BEFORE anything is published.
 #
 # This workflow deliberately publishes nothing: no tag, no GitHub Release, no orbit-update.json,
@@ -136,7 +136,7 @@ jobs:
           fi
 
           # The candidate has to be signed with the same permanent certificate as a real release,
-          # or it will not install over the user's existing Orbit.
+          # or it will not install over the user's existing JARVIS installation (the legacy Android package identity).
           signature_report="${RUNNER_TEMP}/orbit-apksigner-report.txt"
           "${apksigner}" verify --verbose --print-certs "${apk_path}" > "${signature_report}" 2>&1
           signer_count="$(grep -ciF 'certificate SHA-256 digest:' "${signature_report}" || true)"
@@ -157,7 +157,7 @@ jobs:
 
           output_dir="${GITHUB_WORKSPACE}/candidate-assets"
           short_sha="$(git rev-parse --short=12 HEAD)"
-          output_apk="${output_dir}/Orbit-Candidate-v${EXPECTED_VERSION_NAME}-${short_sha}.apk"
+          output_apk="${output_dir}/JARVIS-Candidate-v${EXPECTED_VERSION_NAME}-${short_sha}.apk"
           mkdir -p "${output_dir}"
           cp "${apk_path}" "${output_apk}"
           (
@@ -166,7 +166,7 @@ jobs:
           )
 
           {
-            echo "Orbit Assistant candidate build"
+            echo "JARVIS candidate build"
             echo "branch: ${GITHUB_REF_NAME}"
             echo "commit: $(git rev-parse HEAD)"
             echo "versionName: ${actual_version_name}"
@@ -176,11 +176,11 @@ jobs:
             echo "apkSha256: $(sha256sum "${output_apk}" | awk '{print $1}')"
             echo
             echo "This is a candidate build for physical testing only."
-            echo "It is signed with the permanent Orbit certificate so it installs over a release,"
+            echo "It is signed with the existing trusted signing certificate so it installs over a release,"
             echo "but it has not been published and the in-app updater does not know about it."
           } > "${output_dir}/CANDIDATE-INFO.txt"
 
-          echo "artifact_name=Orbit-Candidate-${EXPECTED_VERSION_NAME}-${short_sha}" >> "${GITHUB_OUTPUT}"
+          echo "artifact_name=JARVIS-Candidate-${EXPECTED_VERSION_NAME}-${short_sha}" >> "${GITHUB_OUTPUT}"
           echo "output_dir=${output_dir}" >> "${GITHUB_OUTPUT}"
 
       - name: Upload candidate artifact
