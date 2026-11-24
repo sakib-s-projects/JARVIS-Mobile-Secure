@@ -18,19 +18,22 @@ This repository is being maintained as JARVIS. The upstream Orbit name is retain
 - [x] App display label and text-selection action use JARVIS.
 - [x] Relay title, assistant system identity, and health service name use JARVIS.
 - [x] Existing ORBIT Relay environment variables remain accepted as fallbacks.
-- [ ] Add/verify regression tests for both JARVIS and legacy environment variables.
-- [ ] Confirm CI after the branding changes.
+- [x] Regression tests cover JARVIS Relay token, legacy ORBIT token, and JARVIS health metadata.
+- [x] CI confirms Relay authentication tests, Relay Docker image build, JVM unit tests, debug APK build, and artifact upload.
 
 ### Phase B: product documentation and release identity
-- [ ] Rewrite README and user-facing guides for the JARVIS project.
+- [x] Rewrite README for the JARVIS project and document migration boundaries.
+- [x] Update Gradle root project name and APK workflow display name to JARVIS.
+- [x] Update Local companion display strings to JARVIS.
+- [x] Update Quick Settings tile visible labels and widget provider comment to JARVIS.
+- [ ] Review remaining user-visible strings, updater messages, screenshots, sample content, issue templates, and badges.
 - [ ] Replace upstream release/download links only after JARVIS releases are actually published and verified.
-- [ ] Review screenshots, sample content, issue templates, badges, and workflow labels.
-- [ ] Preserve explicit upstream-origin and license notices where required.
+- [x] Preserve explicit upstream-origin and license notices where required.
 
 ### Phase C: internal identifiers (only when safe)
-- [ ] Review Gradle root project name and build script variable names.
+- [x] Review Gradle root project name and build script naming at the project level.
 - [ ] Rename Java classes/packages/resources only with a full reference search and test coverage.
-- [ ] Keep Android application IDs, signing identity, backup keys, and IPC compatibility stable unless a dedicated migration is designed and tested.
+- [x] Keep Android application IDs, signing identity, updater trust pin, backup keys, and IPC compatibility stable pending a dedicated migration.
 
 ## Current compatibility boundary
 
@@ -40,4 +43,8 @@ The GitHub edition updater currently fetches release metadata and APKs from `lpn
 
 ## Verification record
 
-Each phase must be built and tested on the `jarvis-branding` branch. A green APK CI run is evidence for that source revision only; it is not evidence that a live Relay is deployed or that a phone upgrade was tested.
+- Latest successful build: Build JARVIS APK Run #111, commit `867dc787be2944e6ea5dd0aeb0d0a4e1d9069546`.
+- Run #111 completed all steps successfully: Relay authentication tests, Relay Docker image build, JVM unit tests, debug APK build, and APK artifact upload.
+- Runs #108–#110 also completed successfully.
+- H-3 audit workflow check entries #43–#46 show failure with no jobs returned by the GitHub Jobs API. These are not evidence of a completed audit; the workflow trigger/check configuration needs separate investigation.
+- A green APK CI run is evidence for that source revision only; it is not evidence that a live Relay is deployed or that a phone upgrade was tested.
