@@ -160,10 +160,10 @@ public final class ReleaseModularityTest {
         String workflow = read(".github/workflows/release.yml");
         assertTrue(workflow.contains("EXPECTED_COMPONENT_PACKAGE_NAME: com.orbit.assistant.local"));
         assertTrue(workflow.contains("local/build/outputs/apk/release/local-release.apk"));
-        assertTrue(workflow.contains("::error::Orbit Local component package name verification failed."));
-        assertTrue(workflow.contains("::error::Orbit Local component version verification failed."));
-        assertTrue(workflow.contains("::error::Orbit Local component signer-count verification failed."));
-        assertTrue(workflow.contains("::error::Orbit Local component signing certificate verification failed."));
+        assertTrue(workflow.contains("::error::JARVIS Local component package name verification failed."));
+        assertTrue(workflow.contains("::error::JARVIS Local component version verification failed."));
+        assertTrue(workflow.contains("::error::JARVIS Local component signer-count verification failed."));
+        assertTrue(workflow.contains("::error::JARVIS Local component signing certificate verification failed."));
         assertTrue("the component APK must be published",
                 workflow.contains("Orbit-Local-v${EXPECTED_VERSION_NAME}.apk"));
         assertTrue("and its checksum with it",
