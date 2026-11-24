@@ -195,7 +195,7 @@ def escape_untrusted_context(value: str) -> str:
 
 
 def check_auth(authorization: str | None) -> None:
-    expected = os.environ.get("JARVIS_RELAY_TOKEN", "")
+    expected = os.environ.get("JARVIS_RELAY_TOKEN", os.environ.get("ORBIT_RELAY_TOKEN", ""))
     # Fail closed: unset, blank, or weak primary secrets must never disable authentication.
     if not expected or not expected.strip() or len(expected) < 32:
         raise HTTPException(status_code=503, detail="Relay authentication is not configured securely")
@@ -204,8 +204,8 @@ def check_auth(authorization: str | None) -> None:
     supplied = authorization[len("Bearer "):]
 
     # Optional previous token is accepted only during an explicitly bounded rotation window.
-    previous = os.environ.get("JARVIS_RELAY_TOKEN_PREVIOUS", "")
-    previous_expires = os.environ.get("JARVIS_RELAY_TOKEN_PREVIOUS_EXPIRES_AT", "")
+    previous = os.environ.get("JARVIS_RELAY_TOKEN_PREVIOUS", os.environ.get("ORBIT_RELAY_TOKEN_PREVIOUS", ""))
+    previous_expires = os.environ.get("JARVIS_RELAY_TOKEN_PREVIOUS_EXPIRES_AT", os.environ.get("ORBIT_RELAY_TOKEN_PREVIOUS_EXPIRES_AT", ""))
     previous_valid = False
     try:
         expires_at = float(previous_expires)
@@ -332,7 +332,7 @@ def assistant(req: AssistantRequest, authorization: str | None = Header(default=
             reasoning={"effort": reasoning},
             tools=[{"type": "web_search"}],
             text={"verbosity": "low"},
-            safety_identifier=os.environ.get("JARVIS_SAFETY_ID", "jarvis-personal"),
+            safety_identifier=os.environ.get("JARVIS_SAFETY_ID", os.environ.get("ORBIT_SAFETY_ID", "jarvis-personal")),
             max_output_tokens=1400,
         )
         raw = response.output_text
