@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest an improvement to Orbit Assistant
+description: Suggest an improvement to JARVIS Assistant
 title: "[Feature]: "
 labels: ["enhancement"]
 body:
@@ -11,7 +11,7 @@ body:
     id: problem
     attributes:
       label: What problem would this solve?
-      description: Describe the moment or workflow where Orbit falls short today.
+      description: Describe the moment or workflow where JARVIS falls short today.
     validations:
       required: true
   - type: textarea
@@ -35,9 +35,9 @@ body:
         - Chat and attachments
         - Android actions
         - Routines and automation
-        - Orbit Deck
+        - JARVIS Deck
         - Documents
-        - Orbit Local and AI providers
+        - JARVIS Local and AI providers
         - Personalization and Theme Studio
         - Privacy, security, or updates
         - Other
