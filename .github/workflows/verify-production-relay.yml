@@ -1,0 +1,108 @@
+name: Verify Production Relay
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-relay-verification
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Read-only live Relay checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate required secrets and HTTPS URL
+        env:
+          RELAY_BASE_URL: ${{ secrets.ORBIT_RELAY_BASE_URL }}
+          RELAY_TOKEN: ${{ secrets.ORBIT_RELAY_TOKEN }}
+        shell: bash
+        run: |
+          set +x
+          if [ -z "$RELAY_BASE_URL" ] || [ -z "$RELAY_TOKEN" ]; then
+            echo "::error::Set ORBIT_RELAY_BASE_URL and ORBIT_RELAY_TOKEN in repository Actions secrets."
+            exit 1
+          fi
+          if [ "${#RELAY_TOKEN}" -lt 32 ]; then
+            echo "::error::The configured relay token is shorter than the required 32 characters."
+            exit 1
+          fi
+          python - <<'PY'
+          import os
+          from urllib.parse import urlsplit
+          value = os.environ["RELAY_BASE_URL"].strip()
+          parsed = urlsplit(value)
+          if parsed.scheme != "https" or not parsed.hostname:
+              raise SystemExit("::error::Relay base URL must be an absolute HTTPS URL.")
+          if parsed.username or parsed.password or parsed.query or parsed.fragment:
+              raise SystemExit("::error::Relay base URL must not contain credentials, query, or fragment.")
+          if parsed.path not in ("", "/"):
+              raise SystemExit("::error::Provide the relay origin only, without an API path.")
+          PY
+          echo "Required secrets are present and the relay URL passes HTTPS validation."
+        env:
+          RELAY_BASE_URL: ${{ secrets.ORBIT_RELAY_BASE_URL }}
+          RELAY_TOKEN: ${{ secrets.ORBIT_RELAY_TOKEN }}
+
+      - name: Verify public health endpoint
+        env:
+          RELAY_BASE_URL: ${{ secrets.ORBIT_RELAY_BASE_URL }}
+        shell: bash
+        run: |
+          set +x
+          base="${RELAY_BASE_URL%/}"
+          body="$(mktemp)"
+          trap 'rm -f "$body"' EXIT
+          status="$(curl --silent --show-error --proto '=https' --max-redirs 0 --connect-timeout 10 --max-time 20 -o "$body" -w '%{http_code}' "$base/health")"
+          if [ "$status" != "200" ]; then
+            echo "::error::Health endpoint returned HTTP $status (expected 200)."
+            exit 1
+          fi
+          python - "$body" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              data = json.load(f)
+          if data.get("status") != "ok" or data.get("service") != "orbit-relay":
+              raise SystemExit("::error::Health response does not identify a healthy orbit-relay service.")
+          print("Health endpoint returned the expected orbit-relay status.")
+          PY
+
+      - name: Verify missing-token requests are rejected
+        env:
+          RELAY_BASE_URL: ${{ secrets.ORBIT_RELAY_BASE_URL }}
+        shell: bash
+        run: |
+          set +x
+          base="${RELAY_BASE_URL%/}"
+          status="$(curl --silent --show-error --proto '=https' --max-redirs 0 --connect-timeout 10 --max-time 20 -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{"prompt":"live security probe"}' "$base/assistant")"
+          if [ "$status" != "401" ]; then
+            echo "::error::Missing-token request returned HTTP $status (expected 401)."
+            exit 1
+          fi
+          echo "Missing-token request was rejected with HTTP 401."
+
+      - name: Verify invalid-token requests are rejected
+        env:
+          RELAY_BASE_URL: ${{ secrets.ORBIT_RELAY_BASE_URL }}
+        shell: bash
+        run: |
+          set +x
+          base="${RELAY_BASE_URL%/}"
+          status="$(curl --silent --show-error --proto '=https' --max-redirs 0 --connect-timeout 10 --max-time 20 -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -H 'Authorization: Bearer deliberately-invalid-verification-token' --data '{"prompt":"live security probe"}' "$base/assistant")"
+          if [ "$status" != "401" ]; then
+            echo "::error::Invalid-token request returned HTTP $status (expected 401)."
+            exit 1
+          fi
+          echo "Invalid-token request was rejected with HTTP 401."
+
+      - name: State live-check limitations
+        if: success()
+        run: |
+          echo "Passed: HTTPS transport, health response, missing-token rejection, invalid-token rejection."
+          echo "Not exercised: valid-token inference, live rate-limit threshold, deployed replica count, and provider configuration."
+          echo "Reason: valid-token /assistant requests consume the production rate-limit budget and may invoke the paid AI provider."
+          echo "CI unit tests remain the evidence for rate-limit behavior; deployment topology must be confirmed with the hosting provider."
