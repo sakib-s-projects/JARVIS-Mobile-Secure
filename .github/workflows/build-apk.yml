@@ -50,7 +50,7 @@ jobs:
           python -m pytest -q
 
       - name: Build Relay Docker image (rootless runtime configuration)
-        run: docker build --tag orbit-relay-ci:security-check server
+        run: docker build --tag jarvis-relay-ci:security-check server
 
       - name: Run JVM unit tests
         run: ./gradlew --no-daemon testDebugUnitTest
@@ -61,6 +61,6 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v7
         with:
-          name: Orbit-Assistant-v${{ steps.app_version.outputs.version }}-debug
+          name: JARVIS-v${{ steps.app_version.outputs.version }}-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
