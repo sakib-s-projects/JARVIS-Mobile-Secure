@@ -66,28 +66,34 @@ public class OrbitHttpsIntegrationTest {
 
     @Test public void invalidTlsHostnameIsRejected() throws Exception {
         try (MockWebServer server = new MockWebServer()) {
-            server.useHttps(MockWebServer.sslSocketFactory());
+            HandshakeCertificates certificates = certificates();
+            server.useHttps(certificates.sslSocketFactory(), false);
             server.enqueue(new MockResponse().setResponseCode(200).setBody("should-not-be-read"));
             server.start();
-            String url = server.url("/tls-check").toString().replace("localhost", "wrong-host.invalid").replace("127.0.0.1", "wrong-host.invalid");
+            String url = server.url("/tls-check").toString()
+                    .replace("localhost", "wrong-host.invalid")
+                    .replace("127.0.0.1", "wrong-host.invalid");
             try {
-                client(false).newCall(new Request.Builder().url(url).build()).execute().close();
+                client(false, certificates).newCall(new Request.Builder().url(url).build()).execute().close();
                 fail("TLS hostname mismatch must fail");
             } catch (javax.net.ssl.SSLPeerUnverifiedException expected) {
                 // OkHttp default hostname verification is active.
             }
-            assertNull("TLS request must not reach application handler", server.takeRequest(500, TimeUnit.MILLISECONDS));
+            assertNull("TLS request must not reach application handler",
+                    server.takeRequest(500, TimeUnit.MILLISECONDS));
         }
     }
 
     @Test public void redirectsRemainUnfollowedWhenConfigured() throws Exception {
         try (MockWebServer server = new MockWebServer()) {
-            server.useHttps(MockWebServer.sslSocketFactory());
+            HandshakeCertificates certificates = certificates();
+            server.useHttps(certificates.sslSocketFactory(), false);
             server.enqueue(new MockResponse().setResponseCode(302).setHeader("Location", "/private"));
             server.enqueue(new MockResponse().setResponseCode(200).setBody("redirect-followed"));
             server.start();
             String url = server.url("/redirect").toString().replace("127.0.0.1", "localhost");
-            try (Response response = client(false).newCall(new Request.Builder().url(url).build()).execute()) {
+            try (Response response = client(false, certificates)
+                    .newCall(new Request.Builder().url(url).build()).execute()) {
                 assertEquals(302, response.code());
             }
             assertEquals(1, server.getRequestCount());
