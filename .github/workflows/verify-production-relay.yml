@@ -17,9 +17,6 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Validate required secrets and HTTPS URL
-        env:
-          RELAY_BASE_URL: ${{ secrets.ORBIT_RELAY_BASE_URL }}
-          RELAY_TOKEN: ${{ secrets.ORBIT_RELAY_TOKEN }}
         shell: bash
         run: |
           set +x
