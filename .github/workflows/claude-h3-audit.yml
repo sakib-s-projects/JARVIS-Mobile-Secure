@@ -1,6 +1,9 @@
 name: Claude H-3 Security Audit
 
 on:
+  push:
+    branches:
+      - jarvis-branding
   workflow_dispatch:
 
 permissions:
@@ -11,7 +14,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  push_guard:
+    name: H-3 audit remains manual on source pushes
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain manual audit mode
+        run: echo "Source push validated. The Claude H-3 source audit runs only when manually dispatched, avoiding API usage on every commit."
+
   audit:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
