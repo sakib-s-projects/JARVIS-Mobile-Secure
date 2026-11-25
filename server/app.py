@@ -397,3 +397,35 @@ def assistant(req: AssistantRequest, authorization: str | None = Header(default=
         raise
     except Exception as exc:
         raise HTTPException(status_code=502, detail="AI provider request failed") from exc
+
+@app.post("/__staging/self-test")
+def staging_self_test(authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    """Authenticated, opt-in staging-only probe; never returns tokens or provider text."""
+    if os.environ.get("JARVIS_STAGING_SELF_TEST_ENABLED") != "true":
+        raise HTTPException(status_code=404, detail="Not found")
+    check_auth(authorization)
+    token = os.environ.get("JARVIS_RELAY_TOKEN", os.environ.get("ORBIT_RELAY_TOKEN", ""))
+    rate_limiter.check(hashlib.sha256(token.encode()).hexdigest())
+    endpoint = os.environ.get("JARVIS_CLOUDFLARE_RELAY_URL", "").strip()
+    secret = os.environ.get("JARVIS_CLOUDFLARE_RELAY_TOKEN", "")
+    if not endpoint or not secret:
+        raise HTTPException(status_code=503, detail="Staging relay configuration is incomplete")
+    probe = AssistantRequest(
+        prompt="Reply with a short Bengali greeting. Do not request any device actions.",
+        capabilities=[],
+    )
+    try:
+        result = call_cloudflare_relay(probe, endpoint, secret)
+    except HTTPException as exc:
+        # Keep upstream/provider diagnostics private; the HTTP status is enough for operators.
+        raise HTTPException(status_code=502, detail="Staging upstream self-test failed") from exc
+    return {
+        "status": "ok",
+        "stage": "staging",
+        "checks": {
+            "relay_auth": True,
+            "cloudflare_adapter_auth_and_forwarding": True,
+            "response_schema": isinstance(result, AssistantResponse),
+            "non_empty_reply": bool(result.text.strip()),
+        },
+    }
