@@ -5,7 +5,7 @@ This is a separate, staging-only adapter. It does not modify either existing JAR
 ## Configuration
 
 - `JARVIS_RELAY_SHARED_SECRET`: Worker secret, minimum 32 random characters. It must be unique and must never equal the JARVIS admin, session, or provider-encryption secret.
-- `JARVIS_STAGING_CHAT_URL`: HTTPS URL for the existing staging Worker's `/api/chat` route.
+- `JARVIS_STAGING_CHAT`: Cloudflare Service Binding to the existing `jarvis-ai-connection-staging` Worker. The adapter calls its `/api/chat` route privately through the binding; it does not make a public `workers.dev` subrequest.
 - `AI`: Workers AI binding used only for screenshot analysis.
 - `JARVIS_VISION_ENABLED`: explicit opt-in, `false` by default. Enable only after confirming the account is on Cloudflare Workers Free.
 
@@ -30,4 +30,4 @@ Cloudflare documents a 10,000-Neuron daily free allocation for Workers AI on the
 
 ## Deployment status
 
-Source only. No Worker was deployed, no secret was created, no billing was enabled, and no existing Worker or D1 resource was changed.
+Staging-only deployment. The adapter uses a zero-cost Service Binding to the existing staging chat Worker. No Production Worker, secret value, D1 resource, or billing setting is changed.
