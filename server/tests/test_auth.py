@@ -549,3 +549,22 @@ def test_cloudflare_provider_selected_without_openai_api_key(monkeypatch):
     assert response.status_code == 200
     assert response.json()["text"] == "ok"
     assert len(called) == 1
+
+def test_cloudflare_adapter_timeout_fails_with_safe_502(monkeypatch):
+    import app as relay_app
+
+    def timeout_urlopen(request, timeout):
+        assert timeout == relay_app.UPSTREAM_TIMEOUT_SECONDS
+        raise TimeoutError("sensitive network detail")
+
+    monkeypatch.setattr(relay_app.urllib.request, "urlopen", timeout_urlopen)
+    with pytest.raises(HTTPException) as exc:
+        relay_app.call_cloudflare_relay(
+            AssistantRequest(prompt="hello"),
+            "https://adapter.example.workers.dev",
+            "c" * 40,
+        )
+    assert exc.value.status_code == 502
+    assert exc.value.detail == "Cloudflare relay is unavailable"
+    assert "sensitive network detail" not in str(exc.value)
+
