@@ -1,0 +1,24 @@
+name: H-3 Live Verification (one-time)
+
+on:
+  push:
+    branches:
+      - jarvis-branding
+    paths:
+      - .github/workflows/h3-live-verification-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  staging-live-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call temporary staging verification trigger
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error --connect-timeout 15 --max-time 180 "https://jarvis-relay-adapter-staging.sakib468932.workers.dev/__staging/verify/7f2b0f31-8c46-4fbd-9e8c-5c2a6d7e4b91")"
+          echo "$response"
+          python -c 'import json,sys; d=json.loads(sys.argv[1]); c=d["result"]["checks"]; assert d["fastapiStatus"] == 200 and d["result"]["status"] == "ok" and all(c.values()), d' "$response"
