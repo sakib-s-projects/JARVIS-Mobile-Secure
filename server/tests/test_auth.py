@@ -568,3 +568,33 @@ def test_cloudflare_adapter_timeout_fails_with_safe_502(monkeypatch):
     assert exc.value.detail == "Cloudflare relay is unavailable"
     assert "sensitive network detail" not in str(exc.value)
 
+def test_cloudflare_adapter_http_error_body_is_not_exposed(monkeypatch):
+    import io
+    import urllib.error
+    import app as relay_app
+
+    body = json.dumps({
+        "error": "PROVIDER_UNAVAILABLE",
+        "upstreamStatus": 503,
+        "message": "secret provider response text",
+    }).encode("utf-8")
+
+    def rejected_urlopen(request, timeout):
+        raise urllib.error.HTTPError(
+            request.full_url, 503, "Service Unavailable", {}, io.BytesIO(body)
+        )
+
+    monkeypatch.setattr(relay_app.urllib.request, "urlopen", rejected_urlopen)
+    with pytest.raises(HTTPException) as exc:
+        relay_app.call_cloudflare_relay(
+            AssistantRequest(prompt="hello"),
+            "https://adapter.example.workers.dev",
+            "c" * 40,
+        )
+
+    assert exc.value.status_code == 502
+    assert exc.value.detail == "Cloudflare relay request was rejected"
+    assert exc.value.headers["X-JARVIS-Adapter-HTTP-Status"] == "503"
+    assert exc.value.headers["X-JARVIS-Adapter-Error"] == "PROVIDER_UNAVAILABLE"
+    assert exc.value.headers["X-JARVIS-Provider-Status"] == "503"
+    assert "secret provider response text" not in str(exc.value)
