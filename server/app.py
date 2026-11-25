@@ -300,6 +300,7 @@ def call_cloudflare_relay(req: AssistantRequest, endpoint: str, shared_secret: s
             "Authorization": "Bearer " + shared_secret,
             "Content-Type": "application/json",
             "Accept": "application/json",
+            "User-Agent": "JARVIS-Relay/1.0 (+https://github.com/sakib-s-projects/JARVIS-Mobile-Secure)",
         },
         method="POST",
     )
