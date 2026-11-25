@@ -2,10 +2,11 @@ services:
   - type: web
     name: jarvis-relay-staging
     runtime: docker
-    rootDir: server
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: ./server
     plan: free
     region: singapore
-    autoDeploy: false
+    autoDeployTrigger: off
     healthCheckPath: /health
     envVars:
       - key: PORT
