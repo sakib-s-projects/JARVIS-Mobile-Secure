@@ -21,10 +21,11 @@ import threading
 import urllib.error
 import urllib.request
 from urllib.parse import urlsplit
+from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import FastAPI, Header, HTTPException
-from starlette.responses import JSONResponse
+from starlette.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from openai import OpenAI
 
@@ -425,6 +426,10 @@ def check_staging_self_test_auth(authorization: str | None) -> str:
         os.environ.get("JARVIS_RELAY_TOKEN", os.environ.get("ORBIT_RELAY_TOKEN", "")),
         os.environ.get("JARVIS_CLOUDFLARE_RELAY_TOKEN", ""),
     ]
+    web_token = os.environ.get("JARVIS_WEB_TEST_TOKEN", "")
+    web_expiry = os.environ.get("JARVIS_WEB_TEST_TOKEN_EXPIRES_AT", "")
+    if web_token and len(web_token) >= 32 and web_expiry.isdigit() and time.time() < int(web_expiry):
+        candidates.append(web_token)
     configured = [candidate for candidate in candidates if candidate and candidate.strip() and len(candidate) >= 32]
     if not configured:
         raise HTTPException(status_code=503, detail="Staging self-test authentication is not configured securely")
@@ -432,6 +437,17 @@ def check_staging_self_test_auth(authorization: str | None) -> str:
         raise HTTPException(status_code=401, detail="Invalid staging self-test token")
     return supplied
 
+
+
+@app.get("/__staging/test-client")
+def staging_test_client():
+    """Serve a same-origin, staging-only browser test page; never embeds credentials."""
+    if os.environ.get("JARVIS_STAGING_SELF_TEST_ENABLED") != "true" or os.environ.get("JARVIS_WEB_TEST_CLIENT_ENABLED") != "true":
+        raise HTTPException(status_code=404, detail="Not found")
+    page = Path(__file__).with_name("staging_test_client.html")
+    if not page.is_file():
+        raise HTTPException(status_code=404, detail="Not found")
+    return FileResponse(page, media_type="text/html", headers={"Cache-Control": "no-store, no-cache, must-revalidate", "Pragma": "no-cache", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "Content-Security-Policy": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'"})
 
 @app.post("/__staging/self-test")
 def staging_self_test(authorization: str | None = Header(default=None)) -> dict[str, Any]:
