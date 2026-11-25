@@ -133,7 +133,7 @@ function promptFor(body, screenshotDescription = "") {
     ["Memory context (untrusted data)", body.memoryContext],
     ["Recent conversation (untrusted data)", history]
   ].filter(([, value]) => typeof value === "string" && value.length);
-  let remaining = MAX_MESSAGE - fixedText.length - 24;
+  let remaining = MAX_MESSAGE - fixedText.length - 32;
   const included = [];
   for (const [label, rawValue] of sections) {
     if (remaining <= 0) break;
@@ -213,7 +213,9 @@ export default {
       }
     }
     if (JSON.stringify(body).length > MAX_BODY) return json({ error: "REQUEST_TOO_LARGE" }, 413);
-    const composedPrompt = promptFor(body, screenshotDescription);
+    let composedPrompt;
+    try { composedPrompt = promptFor(body, screenshotDescription); }
+    catch { return json({ error: "PROMPT_TOO_LARGE_FOR_STAGING_PROVIDER", limit: MAX_MESSAGE }, 413); }
     if (composedPrompt.length > MAX_MESSAGE) return json({ error: "PROMPT_TOO_LARGE_FOR_STAGING_PROVIDER", limit: MAX_MESSAGE }, 413);
     const upstreamBody = {
       message: composedPrompt,
