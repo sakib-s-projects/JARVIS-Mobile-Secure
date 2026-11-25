@@ -131,8 +131,8 @@ test("rejects mandatory policy and user prompt that cannot fit the provider limi
       return new Response("{}", { status: 200 });
     };
     const response = await worker.fetch(request({
-      prompt: "প্রশ্ন ".repeat(3000),
-      systemPrompt: "নীতি ".repeat(2000)
+      prompt: "প্রশ্ন ".repeat(1200),
+      systemPrompt: "নীতি ".repeat(1200)
     }), baseEnv());
     assert.equal(response.status, 413);
     assert.equal((await response.json()).error, "PROMPT_TOO_LARGE_FOR_STAGING_PROVIDER");
