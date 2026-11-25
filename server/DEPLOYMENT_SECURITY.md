@@ -6,7 +6,7 @@ This checklist applies to the FastAPI relay in this directory. CI tests the rela
 
 - Put the relay behind HTTPS. Do not expose the relay over plaintext HTTP to clients.
 - Keep `OPENAI_API_KEY` and `ORBIT_RELAY_TOKEN` in the hosting platform's secret manager or environment configuration. Never embed either secret in the Android APK, repository, logs, or screenshots.
-- Set `ORBIT_RELAY_TOKEN` to a random secret at least 32 characters long. The relay intentionally fails closed when it is absent, blank, or weak.
+- Set `JARVIS_RELAY_TOKEN` (or the legacy `ORBIT_RELAY_TOKEN`) to a random secret at least 32 characters long. The relay intentionally fails closed when it is absent, blank, or weak.
 - Only configure `ORBIT_RELAY_TOKEN_PREVIOUS` and `ORBIT_RELAY_TOKEN_PREVIOUS_EXPIRES_AT` for a planned rotation, and remove the previous token after the window closes.
 - Keep the container running as the non-root `relay` user (the Dockerfile sets this).
 - The relay OpenAI client has a 45-second upstream timeout and automatic SDK retries disabled, so provider stalls do not hold the single worker indefinitely. Keep platform/reverse-proxy connection and request timeouts bounded as well. Avoid logging Authorization headers, request bodies, prompt contents, or secrets.
