@@ -18,6 +18,9 @@ import hashlib
 import math
 import time
 import threading
+import urllib.error
+import urllib.request
+from urllib.parse import urlsplit
 from typing import Any, Literal
 
 from fastapi import FastAPI, Header, HTTPException
@@ -91,7 +94,7 @@ client = OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),
     timeout=UPSTREAM_TIMEOUT_SECONDS,
     max_retries=0,
-)
+) if os.environ.get("OPENAI_API_KEY") else None
 
 ALLOWED_MODELS = {"gpt-6-luna", "gpt-6.1-sol", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.6"}
 ALLOWED_REASONING = {"none", "low", "medium", "high", "xhigh", "max"}
@@ -278,6 +281,49 @@ def filter_device_actions(actions: list[DeviceAction], capabilities: list[str], 
     ]
 
 
+def call_cloudflare_relay(req: AssistantRequest, endpoint: str, shared_secret: str) -> AssistantResponse:
+    """Call the isolated Cloudflare adapter using a separate server-to-server secret."""
+    parsed = urlsplit(endpoint)
+    if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+        raise HTTPException(status_code=503, detail="Cloudflare relay URL must be a clean HTTPS URL")
+    if len(shared_secret) < 32 or not shared_secret.strip():
+        raise HTTPException(status_code=503, detail="Cloudflare relay authentication is not configured securely")
+    if req.screenshotBase64:
+        raise HTTPException(status_code=413, detail="The current Cloudflare staging provider does not support screenshots")
+    payload = req.model_dump()
+    encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    if len(encoded) > 900 * 1024:
+        raise HTTPException(status_code=413, detail="Request exceeds the Cloudflare staging adapter size limit")
+    request = urllib.request.Request(
+        endpoint.rstrip("/") + "/v1/assistant",
+        data=encoded,
+        headers={
+            "Authorization": "Bearer " + shared_secret,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=UPSTREAM_TIMEOUT_SECONDS) as response:
+            raw = response.read(1024 * 1024 + 1)
+            if len(raw) > 1024 * 1024:
+                raise HTTPException(status_code=502, detail="Cloudflare relay response exceeded the size limit")
+    except urllib.error.HTTPError as exc:
+        # Do not forward upstream response bodies, which may contain provider diagnostics.
+        status = 503 if exc.code in (401, 403, 404) else 502
+        raise HTTPException(status_code=status, detail="Cloudflare relay request was rejected") from exc
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise HTTPException(status_code=502, detail="Cloudflare relay is unavailable") from exc
+    try:
+        result = AssistantResponse.model_validate(json.loads(raw.decode("utf-8")))
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Cloudflare relay returned an invalid response") from exc
+    result.text = result.text.replace(" — ", " - ").replace("—", "-")
+    result.actions = filter_device_actions(result.actions, req.capabilities, req.prompt)
+    return result
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "jarvis-relay"}
@@ -288,8 +334,15 @@ def assistant(req: AssistantRequest, authorization: str | None = Header(default=
     check_auth(authorization)
     token_key = hashlib.sha256(os.environ.get("JARVIS_RELAY_TOKEN", os.environ.get("ORBIT_RELAY_TOKEN", "")).encode()).hexdigest()
     rate_limiter.check(token_key)
-    if not os.environ.get("OPENAI_API_KEY"):
-        raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not configured on the relay")
+    cloudflare_url = os.environ.get("JARVIS_CLOUDFLARE_RELAY_URL", "").strip()
+    cloudflare_token = os.environ.get("JARVIS_CLOUDFLARE_RELAY_TOKEN", "")
+    if cloudflare_url or cloudflare_token:
+        if not cloudflare_url or not cloudflare_token:
+            raise HTTPException(status_code=503, detail="Cloudflare relay configuration is incomplete")
+        return call_cloudflare_relay(req, cloudflare_url, cloudflare_token)
+
+    if not os.environ.get("OPENAI_API_KEY") or client is None:
+        raise HTTPException(status_code=503, detail="No approved AI provider is configured on the relay")
 
     model = req.model if req.model in ALLOWED_MODELS else "gpt-6-luna"
     reasoning = req.reasoning if req.reasoning in ALLOWED_REASONING else "low"
