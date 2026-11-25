@@ -421,7 +421,9 @@ public final class Prefs {
     public static String backendUrl(Context c) { return get(c).getString(BACKEND_URL, "").trim(); }
     public static String token(Context c) { return SecureStore.loadRelayToken(c); }
     public static boolean relayConfigured(Context c) {
-        return backendUrl(c).startsWith("https://");
+        // A URL alone is not an authenticated relay configuration. Keep status truthful
+        // and fail closed when the Keystore token is absent or cannot be decrypted.
+        return backendUrl(c).startsWith("https://") && !token(c).isEmpty();
     }
 
     /** Save the existing HTTPS-relay configuration without ever handling a raw OpenAI API key. */
