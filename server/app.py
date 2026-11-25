@@ -398,14 +398,30 @@ def assistant(req: AssistantRequest, authorization: str | None = Header(default=
     except Exception as exc:
         raise HTTPException(status_code=502, detail="AI provider request failed") from exc
 
+def check_staging_self_test_auth(authorization: str | None) -> str:
+    """Accept either relay ingress auth or the separate server-to-server staging secret."""
+    if authorization is None or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid staging self-test token")
+    supplied = authorization[len("Bearer "):]
+    candidates = [
+        os.environ.get("JARVIS_RELAY_TOKEN", os.environ.get("ORBIT_RELAY_TOKEN", "")),
+        os.environ.get("JARVIS_CLOUDFLARE_RELAY_TOKEN", ""),
+    ]
+    configured = [candidate for candidate in candidates if candidate and candidate.strip() and len(candidate) >= 32]
+    if not configured:
+        raise HTTPException(status_code=503, detail="Staging self-test authentication is not configured securely")
+    if not any(hmac.compare_digest(supplied, candidate) for candidate in configured):
+        raise HTTPException(status_code=401, detail="Invalid staging self-test token")
+    return supplied
+
+
 @app.post("/__staging/self-test")
 def staging_self_test(authorization: str | None = Header(default=None)) -> dict[str, Any]:
     """Authenticated, opt-in staging-only probe; never returns tokens or provider text."""
     if os.environ.get("JARVIS_STAGING_SELF_TEST_ENABLED") != "true":
         raise HTTPException(status_code=404, detail="Not found")
-    check_auth(authorization)
-    token = os.environ.get("JARVIS_RELAY_TOKEN", os.environ.get("ORBIT_RELAY_TOKEN", ""))
-    rate_limiter.check(hashlib.sha256(token.encode()).hexdigest())
+    supplied = check_staging_self_test_auth(authorization)
+    rate_limiter.check(hashlib.sha256(supplied.encode()).hexdigest())
     endpoint = os.environ.get("JARVIS_CLOUDFLARE_RELAY_URL", "").strip()
     secret = os.environ.get("JARVIS_CLOUDFLARE_RELAY_TOKEN", "")
     if not endpoint or not secret:
