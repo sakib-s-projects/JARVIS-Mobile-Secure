@@ -66,4 +66,19 @@ public final class RelayTokenSecurityTest {
         assertFalse(Prefs.get(context).getString(Prefs.BACKEND_URL, "").contains("relay.example"));
         assertEquals("", SecureStore.loadRelayToken(context));
     }
+    @Test public void relayConfiguredRequiresHttpsUrlAndKeystoreToken() {
+        Prefs.get(context).edit().putString(Prefs.BACKEND_URL, "https://relay.example").commit();
+
+        assertFalse("HTTPS URL without a token must not appear configured",
+                Prefs.relayConfigured(context));
+
+        assertTrue(SecureStore.saveRelayToken(context, TOKEN));
+        assertTrue("HTTPS URL plus a decryptable Keystore token is configured",
+                Prefs.relayConfigured(context));
+
+        Prefs.get(context).edit().putString(Prefs.BACKEND_URL, "http://relay.example").commit();
+        assertFalse("A token must not make a non-HTTPS URL configured",
+                Prefs.relayConfigured(context));
+    }
+
 }
