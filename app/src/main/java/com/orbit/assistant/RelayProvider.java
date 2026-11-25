@@ -68,7 +68,11 @@ final class RelayProvider implements AiProvider {
     }
 
     @Override public String statusDetail(Context context) {
-        return Prefs.relayConfigured(context) ? "Relay configured" : "Relay URL required";
+        String backend = Prefs.backendUrl(context);
+        if (backend.isEmpty()) return "Relay URL required";
+        if (!backend.startsWith("https://")) return "HTTPS relay URL required";
+        if (Prefs.token(context).isEmpty()) return "Relay authentication token required";
+        return "Relay configured";
     }
 
     @Override public boolean selectable(Context context) { return true; }
