@@ -73,3 +73,33 @@ def test_staging_self_test_fails_closed_when_cloudflare_config_missing(monkeypat
         headers={"Authorization": "Bearer " + "r" * 40},
     )
     assert response.status_code == 503
+
+
+def test_staging_web_client_is_opt_in_and_does_not_embed_credentials(monkeypatch):
+    client = TestClient(relay_app.app)
+    monkeypatch.setenv("JARVIS_STAGING_SELF_TEST_ENABLED", "true")
+    monkeypatch.delenv("JARVIS_WEB_TEST_CLIENT_ENABLED", raising=False)
+    assert client.get("/__staging/test-client").status_code == 404
+
+    monkeypatch.setenv("JARVIS_WEB_TEST_CLIENT_ENABLED", "true")
+    response = client.get("/__staging/test-client")
+    assert response.status_code == 200
+    assert response.headers["cache-control"].startswith("no-store")
+    assert response.headers["content-security-policy"]
+    assert "JARVIS_WEB_TEST_TOKEN" not in response.text
+    assert "localStorage" not in response.text
+    assert "sessionStorage" not in response.text
+
+
+def test_expired_web_test_token_is_rejected(monkeypatch):
+    monkeypatch.setenv("JARVIS_STAGING_SELF_TEST_ENABLED", "true")
+    monkeypatch.setenv("JARVIS_RELAY_TOKEN", "r" * 40)
+    monkeypatch.setenv("JARVIS_WEB_TEST_TOKEN", "w" * 48)
+    monkeypatch.setenv("JARVIS_WEB_TEST_TOKEN_EXPIRES_AT", "1")
+    monkeypatch.setenv("JARVIS_CLOUDFLARE_RELAY_URL", "https://adapter.example.workers.dev")
+    monkeypatch.setenv("JARVIS_CLOUDFLARE_RELAY_TOKEN", "c" * 40)
+    response = TestClient(relay_app.app).post(
+        "/__staging/self-test",
+        headers={"Authorization": "Bearer " + "w" * 48},
+    )
+    assert response.status_code == 401
