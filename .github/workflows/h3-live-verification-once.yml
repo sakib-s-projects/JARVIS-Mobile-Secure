@@ -15,10 +15,25 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Call temporary staging verification trigger
+      - name: Call temporary staging verification trigger and show safe response
         shell: bash
         run: |
           set -euo pipefail
-          response="$(curl --fail --silent --show-error --connect-timeout 15 --max-time 180 "https://jarvis-relay-adapter-staging.sakib468932.workers.dev/__staging/verify/7f2b0f31-8c46-4fbd-9e8c-5c2a6d7e4b91")"
-          echo "$response"
-          python -c 'import json,sys; d=json.loads(sys.argv[1]); c=d["result"]["checks"]; assert d["fastapiStatus"] == 200 and d["result"]["status"] == "ok" and all(c.values()), d' "$response"
+          body="$(mktemp)"
+          trap 'rm -f "$body"' EXIT
+          status="$(curl --silent --show-error --connect-timeout 15 --max-time 180 -o "$body" -w '%{http_code}' "https://jarvis-relay-adapter-staging.sakib468932.workers.dev/__staging/verify/7f2b0f31-8c46-4fbd-9e8c-5c2a6d7e4b91")"
+          cat "$body"
+          test "$status" = "200" || { echo "::error::Authenticated FastAPI self-test returned HTTP $status"; exit 1; }
+          python - "$body" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              data = json.load(f)
+          checks = data.get("result", {}).get("checks", {})
+          if data.get("fastapiStatus") != 200 or data.get("result", {}).get("status") != "ok":
+              raise SystemExit(f"FastAPI self-test did not succeed: {data!r}")
+          required = ("relay_auth", "cloudflare_adapter_auth_and_forwarding", "response_schema", "non_empty_reply")
+          if any(checks.get(name) is not True for name in required):
+              raise SystemExit(f"Missing or failed end-to-end checks: {data!r}")
+          print("PASS: authenticated FastAPI -> Cloudflare adapter -> staging chat -> FastAPI response.")
+          print("PASS: relay auth, adapter auth/forwarding, response schema and non-empty Bengali reply.")
+          PY
