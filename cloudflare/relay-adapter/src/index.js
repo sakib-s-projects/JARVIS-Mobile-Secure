@@ -189,7 +189,7 @@ export default {
     const expected = env.JARVIS_RELAY_SHARED_SECRET || "";
     const supplied = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
     if (expected.length < 32 || !constantTimeEqual(supplied, expected)) return json({ error: "AUTH_REQUIRED" }, 401);
-    if (!env.JARVIS_STAGING_CHAT_URL || !env.JARVIS_STAGING_CHAT_URL.startsWith("https://")) {
+    if (!env.JARVIS_STAGING_CHAT || typeof env.JARVIS_STAGING_CHAT.fetch !== "function") {
       return json({ error: "UPSTREAM_NOT_CONFIGURED" }, 503);
     }
     const raw = await readBodyLimited(request, MAX_BODY);
@@ -226,12 +226,13 @@ export default {
     };
     let upstream;
     try {
-      upstream = await fetch(env.JARVIS_STAGING_CHAT_URL, {
+      const upstreamRequest = new Request("https://jarvis-ai-connection-staging/api/chat", {
         method: "POST",
         headers: { "content-type": "application/json", "accept": "application/json" },
         body: JSON.stringify(upstreamBody),
         signal: AbortSignal.timeout(45000)
       });
+      upstream = await env.JARVIS_STAGING_CHAT.fetch(upstreamRequest);
     } catch { return json({ error: "UPSTREAM_UNAVAILABLE" }, 502); }
     if (!upstream.ok) return json({ error: "UPSTREAM_PROVIDER_ERROR", upstreamStatus: upstream.status }, 502);
     let result;
