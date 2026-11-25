@@ -38,6 +38,16 @@ def test_staging_self_test_requires_relay_auth_and_returns_no_secrets(monkeypatc
         headers={"Authorization": "Bearer " + "r" * 40},
     )
     assert response.status_code == 200
+    server_to_server = client.post(
+        "/__staging/self-test",
+        headers={"Authorization": "Bearer " + "c" * 40},
+    )
+    assert server_to_server.status_code == 200
+    invalid = client.post(
+        "/__staging/self-test",
+        headers={"Authorization": "Bearer " + "x" * 40},
+    )
+    assert invalid.status_code == 401
     payload = response.json()
     assert payload == {
         "status": "ok",
