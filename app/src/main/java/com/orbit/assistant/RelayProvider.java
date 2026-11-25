@@ -34,6 +34,7 @@ final class RelayProvider implements AiProvider {
     static final String NOT_CONFIGURED_ERROR =
             "API-relay mode is selected, but no relay is configured. Add your HTTPS relay URL or switch Provider to ChatGPT account.";
     static final String HTTPS_ERROR = "For security, Orbit only connects to HTTPS relay URLs.";
+    static final String TOKEN_REQUIRED_ERROR = "Relay authentication token is missing. Add your relay token in Settings before connecting.";
 
     private static final AiCapabilities CAPABILITIES = AiCapabilities.builder()
             .streaming(false)
@@ -77,6 +78,7 @@ final class RelayProvider implements AiProvider {
         String backend = Prefs.backendUrl(context);
         if (backend.isEmpty()) { cb.onError(NOT_CONFIGURED_ERROR); return; }
         if (!backend.startsWith("https://")) { cb.onError(HTTPS_ERROR); return; }
+        if (Prefs.token(context).isEmpty()) { cb.onError(TOKEN_REQUIRED_ERROR); return; }
 
         EXEC.execute(() -> {
             HttpURLConnection conn = null;
@@ -181,6 +183,7 @@ final class RelayProvider implements AiProvider {
         String backend = Prefs.backendUrl(context);
         if (backend.isEmpty()) { cb.onError(NOT_CONFIGURED_ERROR); return; }
         if (!backend.startsWith("https://")) { cb.onError(HTTPS_ERROR); return; }
+        if (Prefs.token(context).isEmpty()) { cb.onError(TOKEN_REQUIRED_ERROR); return; }
         EXEC.execute(() -> {
             HttpURLConnection conn = null;
             try {
