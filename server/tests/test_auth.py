@@ -461,3 +461,81 @@ def test_legacy_relay_token_remains_supported(monkeypatch):
 def test_health_endpoint_uses_jarvis_service_identity():
     from app import health
     assert health() == {"status": "ok", "service": "jarvis-relay"}
+
+
+def test_cloudflare_adapter_uses_separate_bearer_secret_and_filters_actions(monkeypatch):
+    import io
+    import app as relay_app
+
+    token = "c" * 40
+    monkeypatch.setenv("JARVIS_CLOUDFLARE_RELAY_URL", "https://adapter.example.workers.dev")
+    monkeypatch.setenv("JARVIS_CLOUDFLARE_RELAY_TOKEN", token)
+    monkeypatch.setenv("JARVIS_RELAY_TOKEN", "r" * 40)
+    captured = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            return False
+        def read(self, size=-1):
+            return b'{"text":"hello","actions":[{"type":"OPEN_APP","params":{"app":"Maps"}},{"type":"SMS","params":{"body":"x"}}]}'
+
+    def fake_urlopen(request, timeout):
+        captured["request"] = request
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(relay_app.urllib.request, "urlopen", fake_urlopen)
+    req = AssistantRequest(prompt="open maps", capabilities=["OPEN_APP"])
+    result = relay_app.call_cloudflare_relay(req, os.environ["JARVIS_CLOUDFLARE_RELAY_URL"], token)
+
+    assert result.text == "hello"
+    assert [action.type for action in result.actions] == ["OPEN_APP"]
+    assert captured["request"].get_header("Authorization") == "Bearer " + token
+    assert captured["timeout"] == relay_app.UPSTREAM_TIMEOUT_SECONDS
+
+
+def test_cloudflare_adapter_rejects_screenshots_without_sending(monkeypatch):
+    import app as relay_app
+    with pytest.raises(HTTPException) as exc:
+        relay_app.call_cloudflare_relay(
+            AssistantRequest(prompt="describe", screenshotBase64="aGVsbG8="),
+            "https://adapter.example.workers.dev",
+            "c" * 40,
+        )
+    assert exc.value.status_code == 413
+
+
+def test_cloudflare_adapter_requires_clean_https_and_strong_shared_secret():
+    import app as relay_app
+    req = AssistantRequest(prompt="hello")
+    for endpoint, secret in (
+        ("http://adapter.example.workers.dev", "c" * 40),
+        ("https://adapter.example.workers.dev?token=leak", "c" * 40),
+        ("https://adapter.example.workers.dev", "short"),
+    ):
+        with pytest.raises(HTTPException) as exc:
+            relay_app.call_cloudflare_relay(req, endpoint, secret)
+        assert exc.value.status_code == 503
+
+
+def test_cloudflare_provider_selected_without_openai_api_key(monkeypatch):
+    import app as relay_app
+    from fastapi.testclient import TestClient
+
+    token = "r" * 40
+    monkeypatch.setenv("JARVIS_RELAY_TOKEN", token)
+    monkeypatch.setenv("JARVIS_CLOUDFLARE_RELAY_URL", "https://adapter.example.workers.dev")
+    monkeypatch.setenv("JARVIS_CLOUDFLARE_RELAY_TOKEN", "c" * 40)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(relay_app, "client", None)
+    called = []
+    monkeypatch.setattr(relay_app, "call_cloudflare_relay",
+                        lambda req, endpoint, secret: (called.append((endpoint, secret)) or relay_app.AssistantResponse(text="ok")))
+    response = TestClient(relay_app.app).post(
+        "/assistant", json={"prompt": "hello"}, headers={"Authorization": "Bearer " + token}
+    )
+    assert response.status_code == 200
+    assert response.json()["text"] == "ok"
+    assert len(called) == 1
