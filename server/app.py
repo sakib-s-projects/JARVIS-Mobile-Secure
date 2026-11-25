@@ -288,12 +288,10 @@ def call_cloudflare_relay(req: AssistantRequest, endpoint: str, shared_secret: s
         raise HTTPException(status_code=503, detail="Cloudflare relay URL must be a clean HTTPS URL")
     if len(shared_secret) < 32 or not shared_secret.strip():
         raise HTTPException(status_code=503, detail="Cloudflare relay authentication is not configured securely")
-    if req.screenshotBase64:
-        raise HTTPException(status_code=413, detail="The current Cloudflare staging provider does not support screenshots")
     payload = req.model_dump()
     payload["systemPrompt"] = SYSTEM + (LELO_SYSTEM if req.leloMode else "")
     encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    if len(encoded) > 900 * 1024:
+    if len(encoded) > 5 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="Request exceeds the Cloudflare staging adapter size limit")
     request = urllib.request.Request(
         endpoint.rstrip("/") + "/v1/assistant",

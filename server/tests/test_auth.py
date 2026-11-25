@@ -496,15 +496,24 @@ def test_cloudflare_adapter_uses_separate_bearer_secret_and_filters_actions(monk
     assert captured["timeout"] == relay_app.UPSTREAM_TIMEOUT_SECONDS
 
 
-def test_cloudflare_adapter_rejects_screenshots_without_sending(monkeypatch):
+def test_cloudflare_adapter_forwards_screenshot_to_vision_adapter(monkeypatch):
     import app as relay_app
-    with pytest.raises(HTTPException) as exc:
-        relay_app.call_cloudflare_relay(
-            AssistantRequest(prompt="describe", screenshotBase64="aGVsbG8="),
-            "https://adapter.example.workers.dev",
-            "c" * 40,
-        )
-    assert exc.value.status_code == 413
+    token = "c" * 40
+    captured = {}
+    class FakeResponse:
+        def __enter__(self): return self
+        def __exit__(self, *args): return False
+        def read(self, size=-1): return b'{"text":"screenshot analyzed","actions":[]}'
+    def fake_urlopen(request, timeout):
+        captured["body"] = json.loads(request.data.decode("utf-8"))
+        captured["timeout"] = timeout
+        return FakeResponse()
+    monkeypatch.setattr(relay_app.urllib.request, "urlopen", fake_urlopen)
+    req = AssistantRequest(prompt="describe", screenshotBase64="aGVsbG8=")
+    result = relay_app.call_cloudflare_relay(req, "https://adapter.example.workers.dev", token)
+    assert result.text == "screenshot analyzed"
+    assert captured["body"]["screenshotBase64"] == "aGVsbG8="
+    assert captured["timeout"] == relay_app.UPSTREAM_TIMEOUT_SECONDS
 
 
 def test_cloudflare_adapter_requires_clean_https_and_strong_shared_secret():

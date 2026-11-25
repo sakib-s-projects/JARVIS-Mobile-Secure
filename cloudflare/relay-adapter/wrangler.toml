@@ -5,3 +5,7 @@ workers_dev = true
 
 [vars]
 JARVIS_STAGING_CHAT_URL = "https://jarvis-ai-connection-staging.sakib468932.workers.dev/api/chat"
+JARVIS_VISION_ENABLED = "false"
+
+[ai]
+binding = "AI"

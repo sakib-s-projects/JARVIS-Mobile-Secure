@@ -5,16 +5,29 @@ This is a separate, staging-only adapter. It does not modify either existing JAR
 ## Configuration
 
 - `JARVIS_RELAY_SHARED_SECRET`: Worker secret, minimum 32 random characters. It must be unique and must never equal the JARVIS admin, session, or provider-encryption secret.
-- `JARVIS_STAGING_CHAT_URL`: HTTPS URL for the existing staging Worker's `/api/chat` route (the non-secret URL is in `wrangler.toml`).
+- `JARVIS_STAGING_CHAT_URL`: HTTPS URL for the existing staging Worker's `/api/chat` route.
+- `AI`: Workers AI binding used only for screenshot analysis.
+- `JARVIS_VISION_ENABLED`: explicit opt-in, `false` by default. Enable only after confirming the account is on Cloudflare Workers Free.
 
-Deploy only as `jarvis-relay-adapter-staging`. Do not point the FastAPI Production Relay or Android app at this adapter until contract and live staging tests pass.
+## Screenshot flow
 
-## Current deliberate limitation
+Android sends one JPEG screenshot as raw Base64 in `screenshotBase64`. When vision is enabled, the adapter validates the Base64 and 4 MiB encoded-image cap, calls Cloudflare Workers AI `@cf/moondream/moondream3.1-9B-A2B`, then passes only the bounded visual description to the existing text-only staging chat Worker. The description is explicitly labelled untrusted; visible text inside an image is never treated as instructions. The image is not forwarded to the text-only Worker and is not stored by this adapter.
 
-The existing staging chat endpoint accepts a request body up to 1 MiB and is text-only. This adapter therefore rejects any screenshot with HTTP 413 instead of silently dropping it, and caps its inbound body at 900 KiB. It preserves text, history, time, locale, memory/task/screen/notification context and announced Android capabilities within that cap.
+If vision is disabled, missing, or unavailable, screenshot requests fail explicitly. They are never silently downgraded to text-only requests.
 
-The model is prompted to return the Android Relay JSON contract. The adapter parses and validates the shape and filters actions against the exact capabilities supplied by Android. This remains a prompt-mediated model output and must pass staging contract/security tests before production use.
+## Cost and privacy guard
+
+Cloudflare documents a 10,000-Neuron daily free allocation for Workers AI on the Workers Free plan. On the Free plan, requests stop when the allocation is exhausted. A Paid plan may bill above the free allocation, so do not upgrade or enable paid billing. Keep `JARVIS_VISION_ENABLED=false` until the account's plan is confirmed. Screenshots are sent to Cloudflare for inference.
+
+## Limits and rollout
+
+- Adapter request body: 5 MiB maximum.
+- Screenshot Base64: 4 MiB maximum.
+- Vision output passed to text model: 6,000 characters maximum.
+- Existing staging chat prompt remains capped at 12,000 characters.
+- Screenshot support is staging-only and opt-in. Do not use this adapter in Production until live staging contract/security tests pass.
+- The model response is prompt-mediated JSON, not provider-enforced schema output. Parsing and action filters are defense-in-depth, not a guarantee against model mistakes.
 
 ## Deployment status
 
-Source only. No Worker was deployed, no secret was created, and no existing Worker or D1 resource was changed as part of authoring this adapter.
+Source only. No Worker was deployed, no secret was created, no billing was enabled, and no existing Worker or D1 resource was changed.
