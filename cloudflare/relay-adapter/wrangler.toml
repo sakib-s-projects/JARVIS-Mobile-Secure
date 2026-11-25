@@ -4,8 +4,11 @@ compatibility_date = "2026-11-25"
 workers_dev = true
 
 [vars]
-JARVIS_STAGING_CHAT_URL = "https://jarvis-ai-connection-staging.sakib468932.workers.dev/api/chat"
 JARVIS_VISION_ENABLED = "false"
 
 [ai]
 binding = "AI"
+
+[[services]]
+binding = "JARVIS_STAGING_CHAT"
+service = "jarvis-ai-connection-staging"
