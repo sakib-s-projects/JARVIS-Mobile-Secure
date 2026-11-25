@@ -77,6 +77,25 @@ jobs:
           print("PASS: invalid bearer token was rejected with HTTP 401 AUTH_REQUIRED.")
           PY
 
+      - name: Verify existing staging chat accepts a text-only request
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(mktemp)"
+          trap 'rm -f "$body"' EXIT
+          status="$(curl --silent --show-error --proto '=https' --max-redirs 0 --connect-timeout 10 --max-time 50 -o "$body" -w '%{http_code}' -H 'Content-Type: application/json' -H 'Accept: application/json' --data '{"message":"Reply with a short Bengali confirmation that the JARVIS staging text-only test is working. Do not request or perform any phone action.","lang":"bn-BD","persona":"jarvis","responseStyle":"balanced","history":[]}' 'https://jarvis-ai-connection-staging.sakib468932.workers.dev/api/chat')"
+          test "$status" = "200" || { echo "::error::Staging chat returned HTTP $status, expected 200"; exit 1; }
+          python - "$body" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              data = json.load(f)
+          reply = data.get("reply")
+          if not isinstance(reply, str) or not reply.strip():
+              raise SystemExit("Staging chat did not return a non-empty reply string.")
+          print("PASS: staging chat returned HTTP 200 and a non-empty text reply.")
+          print("Reply preview:", reply.strip()[:240].replace("\\n", " "))
+          PY
+
       - name: Record scope boundary
         if: success()
         run: |
