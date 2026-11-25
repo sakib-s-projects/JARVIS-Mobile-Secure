@@ -76,3 +76,21 @@ test("text-only requests continue without invoking vision", async () => {
     assert.equal(visionCalled, false);
   } finally { globalThis.fetch = oldFetch; }
 });
+
+test("rejects oversized chunked request bodies before JSON parsing", async () => {
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(new Uint8Array(5 * 1024 * 1024 + 1));
+      controller.close();
+    }
+  });
+  const req = new Request("https://adapter.example.workers.dev/v1/assistant", {
+    method: "POST",
+    headers: { authorization: "Bearer " + secret, "content-type": "application/json" },
+    body: stream,
+    duplex: "half"
+  });
+  const response = await worker.fetch(req, baseEnv());
+  assert.equal(response.status, 413);
+  assert.equal((await response.json()).error, "REQUEST_TOO_LARGE");
+});

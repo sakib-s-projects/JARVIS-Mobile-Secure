@@ -22,6 +22,35 @@ function json(data, status = 200) {
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
   });
 }
+async function readBodyLimited(request, maxBytes) {
+  const declared = Number(request.headers.get("content-length") || 0);
+  if (declared > maxBytes) return null;
+  if (!request.body) return new Uint8Array();
+  const reader = request.body.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const part = await reader.read();
+      if (part.done) break;
+      total += part.value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => {});
+        return null;
+      }
+      chunks.push(part.value);
+    }
+  } catch {
+    return null;
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
 function constantTimeEqual(a, b) {
   if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
   let diff = 0;
@@ -142,10 +171,8 @@ export default {
     if (!env.JARVIS_STAGING_CHAT_URL || !env.JARVIS_STAGING_CHAT_URL.startsWith("https://")) {
       return json({ error: "UPSTREAM_NOT_CONFIGURED" }, 503);
     }
-    const declared = Number(request.headers.get("content-length") || 0);
-    if (declared > MAX_BODY) return json({ error: "REQUEST_TOO_LARGE" }, 413);
-    const raw = await request.arrayBuffer();
-    if (raw.byteLength > MAX_BODY) return json({ error: "REQUEST_TOO_LARGE" }, 413);
+    const raw = await readBodyLimited(request, MAX_BODY);
+    if (raw === null) return json({ error: "REQUEST_TOO_LARGE" }, 413);
     let body;
     try { body = JSON.parse(new TextDecoder().decode(raw)); }
     catch { return json({ error: "INVALID_JSON" }, 400); }
