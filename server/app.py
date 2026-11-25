@@ -309,9 +309,26 @@ def call_cloudflare_relay(req: AssistantRequest, endpoint: str, shared_secret: s
             if len(raw) > 1024 * 1024:
                 raise HTTPException(status_code=502, detail="Cloudflare relay response exceeded the size limit")
     except urllib.error.HTTPError as exc:
-        # Do not forward upstream response bodies, which may contain provider diagnostics.
+        # Keep diagnostics to bounded, non-sensitive machine codes and status numbers only.
+        safe_error = ""
+        provider_status = ""
+        try:
+            diagnostic = json.loads(exc.read(4096).decode("utf-8"))
+            candidate = diagnostic.get("error") if isinstance(diagnostic, dict) else ""
+            if isinstance(candidate, str) and re.fullmatch(r"[A-Z0-9_]{1,64}", candidate):
+                safe_error = candidate
+            candidate_status = diagnostic.get("upstreamStatus") if isinstance(diagnostic, dict) else None
+            if isinstance(candidate_status, int) and 100 <= candidate_status <= 599:
+                provider_status = str(candidate_status)
+        except Exception:
+            pass
         status = 503 if exc.code in (401, 403, 404) else 502
-        raise HTTPException(status_code=status, detail="Cloudflare relay request was rejected") from exc
+        headers = {"X-JARVIS-Adapter-HTTP-Status": str(exc.code)}
+        if safe_error:
+            headers["X-JARVIS-Adapter-Error"] = safe_error
+        if provider_status:
+            headers["X-JARVIS-Provider-Status"] = provider_status
+        raise HTTPException(status_code=status, detail="Cloudflare relay request was rejected", headers=headers) from exc
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         raise HTTPException(status_code=502, detail="Cloudflare relay is unavailable") from exc
     try:
@@ -433,8 +450,20 @@ def staging_self_test(authorization: str | None = Header(default=None)) -> dict[
     try:
         result = call_cloudflare_relay(probe, endpoint, secret)
     except HTTPException as exc:
-        # Keep upstream/provider diagnostics private; the HTTP status is enough for operators.
-        raise HTTPException(status_code=502, detail="Staging upstream self-test failed") from exc
+        # Expose only bounded status/error codes to this authenticated staging diagnostic.
+        headers = exc.headers or {}
+        detail = "Staging upstream self-test failed"
+        adapter_status = headers.get("X-JARVIS-Adapter-HTTP-Status", "")
+        adapter_error = headers.get("X-JARVIS-Adapter-Error", "")
+        provider_status = headers.get("X-JARVIS-Provider-Status", "")
+        if adapter_status.isdigit():
+            detail += f" (adapter HTTP {adapter_status}"
+            if re.fullmatch(r"[A-Z0-9_]{1,64}", adapter_error):
+                detail += f", {adapter_error}"
+            if provider_status.isdigit():
+                detail += f", provider HTTP {provider_status}"
+            detail += ")"
+        raise HTTPException(status_code=502, detail=detail) from exc
     return {
         "status": "ok",
         "stage": "staging",
