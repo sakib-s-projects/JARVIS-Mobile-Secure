@@ -7,7 +7,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
     && groupadd --system relay \
     && useradd --system --gid relay --home-dir /app --shell /usr/sbin/nologin relay
 
-COPY --chown=relay:relay app.py .
+COPY --chown=relay:relay app.py staging_test_client.html ./
 
 ENV PORT=8787 \
     PYTHONDONTWRITEBYTECODE=1 \
