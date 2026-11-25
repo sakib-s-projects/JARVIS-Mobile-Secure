@@ -43,6 +43,14 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
+      - name: Set up Node.js for Cloudflare adapter validation
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Validate Cloudflare relay adapter syntax
+        run: node --check cloudflare/relay-adapter/src/index.js
+
       - name: Run relay authentication tests
         run: |
           cd server
