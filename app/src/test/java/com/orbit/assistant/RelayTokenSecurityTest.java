@@ -81,4 +81,16 @@ public final class RelayTokenSecurityTest {
                 Prefs.relayConfigured(context));
     }
 
+    @Test public void relayStatusExplainsMissingAuthenticationToken() {
+        Prefs.get(context).edit().putString(Prefs.BACKEND_URL, "https://relay.example").commit();
+        RelayProvider provider = new RelayProvider();
+
+        assertEquals(AiProvider.Status.NEEDS_SETUP, provider.status(context));
+        assertEquals("Relay authentication token required", provider.statusDetail(context));
+
+        assertTrue(SecureStore.saveRelayToken(context, TOKEN));
+        assertEquals(AiProvider.Status.READY, provider.status(context));
+        assertEquals("Relay configured", provider.statusDetail(context));
+    }
+
 }
