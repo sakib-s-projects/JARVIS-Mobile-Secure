@@ -265,7 +265,11 @@ public final class ConversationStore {
             }
         }
         String finalTitle = existing == null ? NEW_CHAT_TITLE : existing.title;
-        all.add(new Conversation(wantedId, finalTitle, System.currentTimeMillis(), clipped,
+        long activityTime = System.currentTimeMillis();
+        for (Conversation item : all) {
+            if (activityTime <= item.updatedAt) activityTime = item.updatedAt + 1L;
+        }
+        all.add(new Conversation(wantedId, finalTitle, activityTime, clipped,
                 existing == null ? "" : existing.intelligenceMode, existing != null && existing.pinned,
                 existing == null ? startingSelection : existing.aiSelection,
                 existing == null ? TITLE_DEFAULT : existing.titleOwner,
