@@ -132,8 +132,11 @@ export default {
     if (body.screenshotBase64) return json({ error: "SCREENSHOT_NOT_SUPPORTED_BY_STAGING_ADAPTER" }, 413);
     if (JSON.stringify(body).length > MAX_BODY) return json({ error: "REQUEST_TOO_LARGE" }, 413);
 
+    const composedPrompt = promptFor(body);
+    if (composedPrompt.length > MAX_MESSAGE) return json({ error: "PROMPT_TOO_LARGE_FOR_STAGING_PROVIDER", limit: MAX_MESSAGE }, 413);
+
     const upstreamBody = {
-      message: promptFor(body).slice(0, MAX_MESSAGE),
+      message: composedPrompt,
       lang: typeof body.locale === "string" && body.locale.toLowerCase().startsWith("en") ? "en-US" : "bn-BD",
       persona: "jarvis",
       responseStyle: "balanced",
