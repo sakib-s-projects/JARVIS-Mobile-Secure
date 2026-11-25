@@ -94,3 +94,48 @@ test("rejects oversized chunked request bodies before JSON parsing", async () =>
   assert.equal(response.status, 413);
   assert.equal((await response.json()).error, "REQUEST_TOO_LARGE");
 });
+
+
+test("bounds oversized optional context while preserving the user request", async () => {
+  const oldFetch = globalThis.fetch;
+  let chatInput;
+  try {
+    globalThis.fetch = async (_url, options) => {
+      chatInput = JSON.parse(options.body);
+      return new Response(JSON.stringify({ reply: '{"text":"ঠিক আছে","actions":[]}' }), {
+        status: 200, headers: { "content-type": "application/json" }
+      });
+    };
+    const response = await worker.fetch(request({
+      prompt: "এই স্ক্রিনে কী দেখাচ্ছে?",
+      systemPrompt: "নীতি ".repeat(900),
+      screenText: "দীর্ঘ স্ক্রিন টেক্সট ".repeat(12000),
+      notificationContext: "notification ".repeat(1000),
+      memoryContext: "memory ".repeat(1000),
+      capabilities: []
+    }), baseEnv());
+    assert.equal(response.status, 200);
+    assert.ok(chatInput.message.length <= 12000);
+    assert.match(chatInput.message, /এই স্ক্রিনে কী দেখাচ্ছে\?/);
+    assert.match(chatInput.message, /নীতি/);
+    assert.match(chatInput.message, /context clipped/);
+  } finally { globalThis.fetch = oldFetch; }
+});
+
+test("rejects mandatory policy and user prompt that cannot fit the provider limit", async () => {
+  const oldFetch = globalThis.fetch;
+  let upstreamCalled = false;
+  try {
+    globalThis.fetch = async () => {
+      upstreamCalled = true;
+      return new Response("{}", { status: 200 });
+    };
+    const response = await worker.fetch(request({
+      prompt: "প্রশ্ন ".repeat(3000),
+      systemPrompt: "নীতি ".repeat(2000)
+    }), baseEnv());
+    assert.equal(response.status, 413);
+    assert.equal((await response.json()).error, "PROMPT_TOO_LARGE_FOR_STAGING_PROVIDER");
+    assert.equal(upstreamCalled, false);
+  } finally { globalThis.fetch = oldFetch; }
+});
