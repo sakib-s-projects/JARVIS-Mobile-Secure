@@ -31,3 +31,11 @@ Cloudflare documents a 10,000-Neuron daily free allocation for Workers AI on the
 ## Deployment status
 
 Staging-only deployment. The adapter uses a zero-cost Service Binding to the existing staging chat Worker. No Production Worker, secret value, D1 resource, or billing setting is changed.
+
+## Verification record (2026-11-25)
+
+- Passed: authenticated FastAPI staging self-test through the Cloudflare adapter and its private `JARVIS_STAGING_CHAT` Service Binding to the existing staging chat Worker. The test checked relay authentication, adapter authentication/forwarding, response schema, and a non-empty Bengali reply.
+- Evidence: [H-3 staging live verification, GitHub Actions run #45642056001](https://github.com/sakib-s-projects/JARVIS-Mobile-Secure/actions/runs/45642056001) (attempt 4, success).
+- Passed: public staging health, unauthenticated and invalid-token rejection, and direct text-only staging chat checks: [run #45643058453](https://github.com/sakib-s-projects/JARVIS-Mobile-Secure/actions/runs/45643058453).
+- Vision remains disabled. Production resources and secrets were not changed.
+- Still required before H-3 can be marked fully complete: a real Android client request authenticated with the app-held `JARVIS_RELAY_TOKEN` through FastAPI. The server-to-server test above does not substitute for that device-side test.
