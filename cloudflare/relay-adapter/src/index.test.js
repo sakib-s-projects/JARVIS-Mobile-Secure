@@ -5,8 +5,14 @@ import worker from "./index.js";
 const secret = "s".repeat(40);
 const baseEnv = (overrides = {}) => ({
   JARVIS_RELAY_SHARED_SECRET: secret,
-  JARVIS_STAGING_CHAT_URL: "https://staging.example.workers.dev/api/chat",
   JARVIS_VISION_ENABLED: "true",
+  JARVIS_STAGING_CHAT: {
+    fetch: async request => globalThis.fetch(request.url, {
+      method: request.method,
+      headers: Object.fromEntries(request.headers),
+      body: await request.clone().text()
+    })
+  },
   AI: { run: async () => ({ answer: "A settings screen with Wi-Fi and Bluetooth controls." }) },
   ...overrides
 });
