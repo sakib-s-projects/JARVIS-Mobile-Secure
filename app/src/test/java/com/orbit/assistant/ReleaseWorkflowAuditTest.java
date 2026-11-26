@@ -194,6 +194,27 @@ public final class ReleaseWorkflowAuditTest {
                 yaml.contains("EXPECTED_CERT_SHA256: " + compiledIn));
     }
 
+    /** The optional Local APK is a separately installable trust boundary and must be verified too. */
+    @Test public void theLocalComponentIsVerifiedBeforeItCanBePublished() {
+        String yaml = workflow();
+        contains(yaml, "component_apk=\"local/build/outputs/apk/release/local-release.apk\"",
+                "the release build must produce the Local component");
+        contains(yaml, "EXPECTED_COMPONENT_PACKAGE_NAME: com.orbit.assistant.local",
+                "the component package is pinned");
+        contains(yaml, "::error::JARVIS Local component package name verification failed.",
+                "the component package is verified");
+        contains(yaml, "::error::JARVIS Local component version verification failed.",
+                "the component versionName and versionCode must match the main APK");
+        contains(yaml, "::error::JARVIS Local component signer-count verification failed.",
+                "the component must have exactly one signer");
+        contains(yaml, "::error::JARVIS Local component signing certificate verification failed.",
+                "the component must use the permanent trusted certificate");
+        contains(yaml, "COMPONENT_SHA256", "the component checksum is included in the manifest");
+        contains(yaml, "COMPONENT_SIZE", "the component size is included in the manifest");
+        contains(yaml, "component_checksum_path", "the component checksum is published as an asset");
+        contains(yaml, "\"component\": {", "the component metadata is added to the update manifest");
+    }
+
     // ---- release notes -------------------------------------------------------------------------------
 
     @Test public void releaseNotesComeFromTheChangelogAndStayShort() {
