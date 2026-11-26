@@ -60,7 +60,7 @@ The relay is not considered production-ready merely because CI passes. Live HTTP
 
 ## Release and updater status
 
-This repository currently has no published GitHub Releases. The in-app updater remains pinned to the upstream release source until this JARVIS repository publishes compatible, verified release assets signed with the expected Android signing identity and the updater migration is tested.
+The in-app updater and release-notes feed now resolve releases from this JARVIS repository. The update manifest remains `orbit-update.json` (schema 1), and the historical APK asset filename `Orbit-Assistant-v<version>.apk` is intentionally retained so already-installed builds can consume the first JARVIS-owned release. The repository must publish a compatible release signed with the existing pinned Android signing identity before an update can be considered live. No production release is implied by a CI artifact.
 
 Do not install unofficial APKs or treat a successful CI artifact as a signed production release. A debug APK is for development/testing only.
 
