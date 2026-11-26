@@ -1,6 +1,9 @@
 name: Verify JARVIS release signing (no publish)
 
 on:
+  push:
+    branches:
+      - h1-updater-migration
   workflow_dispatch:
 
 permissions:
@@ -58,16 +61,13 @@ jobs:
               exit 1
             fi
           done
-
           keystore_path="${RUNNER_TEMP}/jarvis-release.jks"
           printf '%s' "${ORBIT_RELEASE_KEYSTORE_B64}" | base64 --decode > "${keystore_path}"
           chmod 600 "${keystore_path}"
           test -s "${keystore_path}"
-
           keytool -list -v -keystore "${keystore_path}" \
             -storepass "${ORBIT_RELEASE_STORE_PASSWORD}" \
             -alias "${ORBIT_RELEASE_KEY_ALIAS}" > "${RUNNER_TEMP}/jarvis-keytool.txt"
-
           actual_cert="$(sed -n 's/^[[:space:]]*SHA256: //p' "${RUNNER_TEMP}/jarvis-keytool.txt" | head -n 1 | tr -d ':' | tr '[:upper:]' '[:lower:]')"
           expected_cert="$(printf '%s' "${EXPECTED_CERT_SHA256}" | tr -d ':' | tr '[:upper:]' '[:lower:]')"
           if [[ -z "${actual_cert}" || "${actual_cert}" != "${expected_cert}" ]]; then
@@ -93,10 +93,8 @@ jobs:
           aapt="${build_tools_dir}/aapt"
           apksigner="${build_tools_dir}/apksigner"
           expected_cert="$(printf '%s' "${EXPECTED_CERT_SHA256}" | tr -d ':' | tr '[:upper:]' '[:lower:]')"
-
           verify_apk() {
-            local apk="$1"
-            local expected_package="$2"
+            local apk="$1" expected_package="$2"
             if [[ ! -s "${apk}" ]]; then
               echo "::error::Expected APK is missing or empty: ${apk}"
               return 1
@@ -118,7 +116,6 @@ jobs:
             fi
             echo "Verified package and single pinned signer: ${expected_package}"
           }
-
           verify_apk "app/build/outputs/apk/release/app-release.apk" "${EXPECTED_PACKAGE_NAME}"
           verify_apk "local/build/outputs/apk/release/local-release.apk" "${EXPECTED_COMPONENT_PACKAGE_NAME}"
 
