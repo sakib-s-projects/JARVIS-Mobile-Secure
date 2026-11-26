@@ -338,7 +338,8 @@ jobs:
               notes += ''.join(f'- {bullet}\n' for bullet in bullets)
               notes += '\n'
           notes += (
-              'This JARVIS APK uses the existing trusted Android signing certificate. '
+              'This JARVIS APK uses the new JARVIS signing certificate. '
+              'It cannot update an installation signed with the previous certificate; such users need a separately planned fresh-install/migration path. '
               'The attached `.sha256` file can be used to verify the APK download.\n'
           )
 
