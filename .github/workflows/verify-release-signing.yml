@@ -62,7 +62,29 @@ jobs:
             fi
           done
           keystore_path="${RUNNER_TEMP}/jarvis-release.jks"
-          printf '%s' "${ORBIT_RELEASE_KEYSTORE_B64}" | base64 --decode > "${keystore_path}"
+          export JARVIS_KEYSTORE_B64="${ORBIT_RELEASE_KEYSTORE_B64}"
+          python3 - <<'PY'
+          import base64
+          import os
+          import re
+          from pathlib import Path
+
+          raw = os.environ["JARVIS_KEYSTORE_B64"]
+          compact = re.sub(r"\\s+", "", raw)
+          if not compact or not re.fullmatch(r"[A-Za-z0-9+/]*={0,2}", compact):
+              raise SystemExit("::error::Keystore secret is not plain standard Base64. Copy only the complete Base64 text, without labels or quotes.")
+          unpadded = compact.rstrip("=")
+          if len(unpadded) % 4 == 1:
+              raise SystemExit("::error::Keystore Base64 is truncated or malformed (invalid encoded length).")
+          normalized = unpadded + ("=" * ((4 - len(unpadded) % 4) % 4))
+          try:
+              decoded = base64.b64decode(normalized, validate=True)
+          except Exception:
+              raise SystemExit("::error::Keystore Base64 could not be decoded. Re-copy the complete value from the backup file.")
+          if not decoded:
+              raise SystemExit("::error::Decoded keystore is empty.")
+          Path(os.environ["RUNNER_TEMP"], "jarvis-release.jks").write_bytes(decoded)
+          PY
           chmod 600 "${keystore_path}"
           test -s "${keystore_path}"
           keytool -list -v -keystore "${keystore_path}" \
