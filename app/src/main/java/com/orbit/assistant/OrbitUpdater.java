@@ -757,7 +757,7 @@ public final class OrbitUpdater {
             connection.setConnectTimeout(15000);
             connection.setReadTimeout(45000);
             connection.setRequestProperty("Accept", accept);
-            connection.setRequestProperty("User-Agent", "OrbitAssistant/" + BuildConfig.VERSION_NAME + " (Android updater)");
+            connection.setRequestProperty("User-Agent", "JARVISAssistant/" + BuildConfig.VERSION_NAME + " (Android updater)");
             int status = connection.getResponseCode();
             if (status == HttpURLConnection.HTTP_MOVED_PERM ||
                     status == HttpURLConnection.HTTP_MOVED_TEMP ||
