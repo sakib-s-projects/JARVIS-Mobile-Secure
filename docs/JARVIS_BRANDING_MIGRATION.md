@@ -69,7 +69,7 @@ This is a documented manual migration route, not a completed end-to-end test. Th
 ## Current H-1 status
 
 - H-1 pull request: [PR #2](https://github.com/sakib-s-projects/JARVIS-Mobile-Secure/pull/2), Draft and unmerged.
-- Latest H-1 commit: `b3de10d10ea0bc5abada096aa1d0c1935cf5b80d`.
+- Latest H-1 updater/code commit: `b3de10d10ea0bc5abada096aa1d0c1935cf5b80d`; this migration-guide update is committed separately on the same H-1 branch.
 - Signed Release Verification #7 passed: [workflow run](https://github.com/sakib-s-projects/JARVIS-Mobile-Secure/actions/runs/45871453135).
 - Build JARVIS APK #226 passed: [workflow run](https://github.com/sakib-s-projects/JARVIS-Mobile-Secure/actions/runs/45871453133).
 - The repository currently has no published GitHub Releases. Therefore live release discovery/download verification remains blocked until a release is intentionally published.
