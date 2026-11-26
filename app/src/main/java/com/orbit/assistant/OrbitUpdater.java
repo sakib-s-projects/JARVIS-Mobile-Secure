@@ -786,8 +786,7 @@ public final class OrbitUpdater {
         return normalized.equals("github.com") || normalized.equals("api.github.com")
                 || normalized.equals("raw.githubusercontent.com")
                 || normalized.equals("release-assets.githubusercontent.com")
-                || normalized.equals("objects.githubusercontent.com")
-                || normalized.endsWith(".githubusercontent.com");
+                || normalized.equals("objects.githubusercontent.com");
     }
 
     private static void requireHttpsFinalUrl(HttpURLConnection connection) throws Exception {
