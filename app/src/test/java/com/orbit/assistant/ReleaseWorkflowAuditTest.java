@@ -222,4 +222,34 @@ public final class ReleaseWorkflowAuditTest {
         }
         fail("CHANGELOG.md was not found above " + start);
     }
+    // ---- signing secrets and publication boundary ---------------------------------------------------
+
+    @Test public void allReleaseSigningSecretsAreInjectedOnlyIntoTheStepsThatNeedThem() {
+        String yaml = workflow();
+        contains(yaml, "ORBIT_RELEASE_KEYSTORE_B64: ${{ secrets.ORBIT_RELEASE_KEYSTORE_B64 }}",
+                "the keystore is sourced from the repository secret");
+        contains(yaml, "ORBIT_RELEASE_STORE_PASSWORD: ${{ secrets.ORBIT_RELEASE_STORE_PASSWORD }}",
+                "the keystore password is sourced from a secret");
+        contains(yaml, "ORBIT_RELEASE_KEY_PASSWORD: ${{ secrets.ORBIT_RELEASE_KEY_PASSWORD }}",
+                "the signing-key password is sourced from a secret");
+        contains(yaml, "ORBIT_RELEASE_KEY_ALIAS: ${{ secrets.ORBIT_RELEASE_KEY_ALIAS }}",
+                "the signing-key alias is sourced from a secret");
+        contains(yaml, "if [[ -z \"${ORBIT_RELEASE_KEYSTORE_B64:-}\" ]]; then",
+                "a missing keystore fails closed before the release build");
+        contains(yaml, "rm -f \"${RUNNER_TEMP}/orbit-release.jks\"",
+                "the temporary keystore is removed even when a later step fails");
+    }
+
+    @Test public void onlyVersionTagsOrExplicitDispatchCanStartARelease() {
+        String yaml = workflow();
+        contains(yaml, "permissions:\n  contents: write",
+                "the publishing workflow receives the minimum repository permission");
+        contains(yaml, "tags:\n      - 'v*'",
+                "only version tags automatically start a release");
+        contains(yaml, "workflow_dispatch:",
+                "manual release dispatch is explicit");
+        assertTrue("a release must never publish from an untrusted pull request",
+                !yaml.contains("pull_request:"));
+    }
+
 }
