@@ -48,7 +48,7 @@ public final class ReleaseNotesRepository {
             this.tag = tag;
             this.versionName = versionName;
             this.title = title == null || title.trim().isEmpty()
-                    ? "Orbit Assistant " + tag : title.trim();
+                    ? "JARVIS Assistant " + tag : title.trim();
             this.body = body == null ? "" : body.trim();
             this.publishedAt = publishedAt == null ? "" : publishedAt.trim();
         }
