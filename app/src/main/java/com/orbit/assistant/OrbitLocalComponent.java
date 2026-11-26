@@ -44,7 +44,7 @@ public final class OrbitLocalComponent {
     public static final int PROTOCOL_VERSION = 3;
     /** Orbit's permanent release certificate, the same pin the updater carries. */
     static final String CERTIFICATE_SHA256 =
-            "680F2143F9341628C5C2D753648F8E350D1895C6FCB9120B2786ED396D0E3C53";
+            "84D3414B60EA6574E0A0E2721884F4D8F89D3909AA72643FCEF02C1493A0688F";
 
     /** How usable the component is right now, from Orbit's point of view. */
     public enum State {
