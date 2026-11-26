@@ -376,7 +376,7 @@ public final class UpdateActivity extends Activity {
     private String upToDateMessage() {
         if (Prefs.betaChannel(this)) return "You're on the newest available JARVIS build.";
         if (OrbitVersion.installedIsBeta()) {
-            return "You're running a newer Beta build. Orbit will return to Stable updates when a "
+            return "You're running a newer Beta build. JARVIS will return to Stable updates when a "
                     + "newer Stable release becomes available.";
         }
         return "JARVIS is up to date.";
@@ -523,7 +523,7 @@ public final class UpdateActivity extends Activity {
                 "Beta builds give you new JARVIS features earlier, but they may contain bugs, "
                         + "crashes, regressions, increased battery use, or unfinished behavior.\n\n"
                         + "Beta updates are still officially signed and verified by JARVIS.\n\n"
-                        + "You can return to Stable at any time. Orbit will never automatically "
+                        + "You can return to Stable at any time. JARVIS will never automatically "
                         + "downgrade your installed version.",
                 14, UiKit.TEXT, false);
         body.setLineSpacing(0, 1.14f);
@@ -642,7 +642,7 @@ public final class UpdateActivity extends Activity {
             // One short line, once, at the moment of installing. The user opted into Beta
             // already; the full warning is not repeated for every update.
             TextView betaNote = UiKit.text(this,
-                    "Beta build · may be less stable than a normal Orbit release.",
+                    "Beta build · may be less stable than a normal JARVIS release.",
                     12, UiKit.MUTED, false);
             betaNote.setLineSpacing(0, 1.1f);
             betaNote.setPadding(0, UiKit.dp(this, 7), 0, 0);
