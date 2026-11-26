@@ -68,6 +68,26 @@ public final class UpdateDiscoveryTest {
                 OrbitUpdater.isAllowedUpdateHost("API.GITHUB.COM"));
         assertFalse("a missing host is never trusted", OrbitUpdater.isAllowedUpdateHost(null));
     }
+    @Test public void updateUrlsRequireHttpsAndAnExactTrustedHost() {
+        assertTrue(OrbitUpdater.isAllowedUpdateUrl("https://github.com/releases/download/tag/file.apk"));
+        assertTrue(OrbitUpdater.isAllowedUpdateUrl("https://release-assets.githubusercontent.com/file"));
+        assertFalse(OrbitUpdater.isAllowedUpdateUrl("http://github.com/releases/file.apk"));
+        assertFalse(OrbitUpdater.isAllowedUpdateUrl("https://attacker.githubusercontent.com/file.apk"));
+        assertFalse(OrbitUpdater.isAllowedUpdateUrl("https://github.com.attacker.test/file.apk"));
+        assertFalse(OrbitUpdater.isAllowedUpdateUrl("file:///tmp/update.apk"));
+        assertFalse(OrbitUpdater.isAllowedUpdateUrl("not a URL"));
+        assertFalse(OrbitUpdater.isAllowedUpdateUrl(null));
+    }
+
+    @Test public void updaterAllowsAtMostFiveRedirectHops() {
+        for (int redirectsFollowed = 0; redirectsFollowed < 5; redirectsFollowed++) {
+            assertTrue("redirect hop " + (redirectsFollowed + 1),
+                    OrbitUpdater.canFollowRedirect(redirectsFollowed));
+        }
+        assertFalse("sixth redirect must be refused", OrbitUpdater.canFollowRedirect(5));
+        assertFalse("negative redirect count is invalid", OrbitUpdater.canFollowRedirect(-1));
+    }
+
     // ---- structural eligibility -------------------------------------------------------------------
 
     @Test public void aNormalStableReleaseIsEligibleInBothChannels() {
