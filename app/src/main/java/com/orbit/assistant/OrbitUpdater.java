@@ -780,7 +780,7 @@ public final class OrbitUpdater {
         throw new UpdateException("The update service redirect limit was exceeded.");
     }
 
-    private static boolean isAllowedUpdateHost(String host) {
+    static boolean isAllowedUpdateHost(String host) {
         if (host == null) return false;
         String normalized = host.toLowerCase(Locale.US);
         return normalized.equals("github.com") || normalized.equals("api.github.com")
