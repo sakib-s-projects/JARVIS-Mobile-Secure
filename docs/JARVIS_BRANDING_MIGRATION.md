@@ -54,7 +54,7 @@ Android will not install an APK signed by the new certificate as an in-place upd
 
 ### Safe manual migration path
 
-The app already has a local file-based backup and restore flow under **Settings → Backup & Restore**. The backup format remains schema version 1.
+The current app source has a local file-based backup and restore flow under **Settings → Backup & Restore**. Use it on the old-signed installation only if that installed version actually shows the Export option; if it does not, do not uninstall or clear app data. A separate export path must be established first. The backup format remains schema version 1.
 
 1. While the old-signed app is still installed, open **Settings → Backup & Restore → Export Orbit backup**.
 2. Save the `.orbitbackup` file somewhere outside the app's private storage (for example, a user-controlled Downloads folder or private cloud-drive folder). Confirm the file exists and is not empty. The backup is JSON and contains private app data; keep it private and do not share it.
