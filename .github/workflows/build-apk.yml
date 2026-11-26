@@ -3,7 +3,7 @@ name: Build JARVIS APK
 on:
   workflow_dispatch:
   push:
-    branches: [ main, jarvis-branding ]
+    branches: [ main, jarvis-branding, h3-memory-context-hardening ]
 
 permissions:
   contents: read
