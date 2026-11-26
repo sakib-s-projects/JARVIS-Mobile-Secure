@@ -54,6 +54,7 @@ public final class OrbitUpdater {
      * from turning one update check into a dozen requests.
      */
     private static final int MAX_MANIFEST_FETCHES = 4;
+    private static final int MAX_REDIRECTS = 5;
     private static final String UPDATE_MANIFEST_NAME = "orbit-update.json";
     private static final String PACKAGE_NAME = "com.orbit.assistant";
     private static final String CERTIFICATE_SHA256 =
@@ -747,11 +748,11 @@ public final class OrbitUpdater {
     }
 
     private static HttpURLConnection open(String value, String accept) throws Exception {
-        URL current = new URL(value);
-        if (!isAllowedUpdateHost(current.getHost()) || !"https".equalsIgnoreCase(current.getProtocol())) {
+        if (!isAllowedUpdateUrl(value)) {
             throw new UpdateException("JARVIS updates require an official HTTPS host.");
         }
-        for (int redirects = 0; redirects <= 5; redirects++) {
+        URL current = new URL(value);
+        for (int redirects = 0; ; redirects++) {
             HttpURLConnection connection = (HttpURLConnection) current.openConnection();
             connection.setInstanceFollowRedirects(false);
             connection.setConnectTimeout(15000);
@@ -765,11 +766,11 @@ public final class OrbitUpdater {
                     status == 307 || status == 308) {
                 String location = connection.getHeaderField("Location");
                 connection.disconnect();
-                if (location == null || location.trim().isEmpty() || redirects == 5) {
+                if (location == null || location.trim().isEmpty() || !canFollowRedirect(redirects)) {
                     throw new UpdateException("The update service redirect is invalid or excessive.");
                 }
                 URL next = new URL(current, location);
-                if (!"https".equalsIgnoreCase(next.getProtocol()) || !isAllowedUpdateHost(next.getHost())) {
+                if (!isAllowedUpdateUrl(next.toString())) {
                     throw new UpdateException("The update service redirected to an untrusted host.");
                 }
                 current = next;
@@ -777,7 +778,20 @@ public final class OrbitUpdater {
             }
             return connection;
         }
-        throw new UpdateException("The update service redirect limit was exceeded.");
+    }
+
+    static boolean canFollowRedirect(int redirectsFollowed) {
+        return redirectsFollowed >= 0 && redirectsFollowed < MAX_REDIRECTS;
+    }
+
+    static boolean isAllowedUpdateUrl(String value) {
+        if (value == null) return false;
+        try {
+            URL url = new URL(value);
+            return "https".equalsIgnoreCase(url.getProtocol()) && isAllowedUpdateHost(url.getHost());
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     static boolean isAllowedUpdateHost(String host) {
@@ -791,8 +805,7 @@ public final class OrbitUpdater {
 
     private static void requireHttpsFinalUrl(HttpURLConnection connection) throws Exception {
         if (connection == null || connection.getURL() == null ||
-                !"https".equalsIgnoreCase(connection.getURL().getProtocol()) ||
-                !isAllowedUpdateHost(connection.getURL().getHost())) {
+                !isAllowedUpdateUrl(connection.getURL().toString())) {
             throw new UpdateException("The update service final URL is not trusted.");
         }
     }
