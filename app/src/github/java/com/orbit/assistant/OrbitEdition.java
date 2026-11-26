@@ -7,15 +7,15 @@ import android.net.Uri;
 import android.provider.Settings;
 
 /**
- * The GitHub edition of Orbit: the only code that can fetch Orbit APKs and install them.
+ * The GitHub edition of JARVIS: the only code that can fetch Orbit APKs and install them.
  *
  * <p>This file is compiled into the debug and release builds and nowhere else. The Google Play
  * build compiles {@code src/play/.../OrbitEdition.java} instead, which has the same shape and
  * refuses every one of these operations. That is the whole distribution boundary: a Play bundle
  * does not carry a GitHub update path that has been switched off, it carries none.
  *
- * <p>Everything here is the mechanism {@link OrbitUpdater} and {@link OrbitLocalInstaller} have
- * always used, moved rather than changed: the same public GitHub endpoints, the same ACTION_VIEW
+ * <p>Everything here is the mechanism {@link OrbitUpdater} and {@link OrbitLocalInstaller} use:
+ * JARVIS-owned public GitHub endpoints, the same ACTION_VIEW
  * hand-off, the same APK MIME type and read grant. The verification that happens before any of it
  * stays with those two classes.
  */
@@ -24,7 +24,7 @@ final class OrbitEdition {
     /** Read by {@link OrbitDistribution}. */
     static final String ID = "github";
 
-    private static final String REPOSITORY = "lpnovi/Orbit-Assistant";
+    private static final String REPOSITORY = "sakib-s-projects/JARVIS-Mobile-Secure";
 
     private OrbitEdition() {}
 
