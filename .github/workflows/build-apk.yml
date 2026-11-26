@@ -51,7 +51,7 @@ jobs:
       - name: Validate Cloudflare relay adapter syntax
         run: node --check cloudflare/relay-adapter/src/index.js
 
-      - name: Run Cloudflare relay adapter tests
+      - name: Run Cloudflare relay adapter and prompt-boundary regression tests
         run: node --test cloudflare/relay-adapter/src/index.test.js
 
       - name: Run relay authentication tests
