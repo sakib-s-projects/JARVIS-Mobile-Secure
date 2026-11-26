@@ -58,7 +58,7 @@ public final class OrbitUpdater {
     private static final String UPDATE_MANIFEST_NAME = "orbit-update.json";
     private static final String PACKAGE_NAME = "com.orbit.assistant";
     private static final String CERTIFICATE_SHA256 =
-            "36:F3:50:AF:14:09:D3:0B:BC:40:80:DB:4C:38:65:D0:49:86:E3:D3:70:6C:7C:54:AB:DB:82:54:48:10:77:1F";
+            "68:0F:21:43:F9:34:16:28:C5:C2:D7:53:64:8F:8E:35:0D:18:95:C6:FC:B9:12:0B:27:86:ED:39:6D:0E:3C:53";
     private static final int SCHEMA = 1;
     private static final int MAX_JSON_BYTES = 256 * 1024;
     /**

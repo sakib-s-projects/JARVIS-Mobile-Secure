@@ -167,8 +167,7 @@ public final class ReleaseWorkflowAuditTest {
                 "the permanent certificate is verified");
         contains(yaml, "EXPECTED_PACKAGE_NAME: com.orbit.assistant",
                 "the package name is pinned in the workflow");
-        contains(yaml, "EXPECTED_CERT_SHA256: 36:F3:50:AF:14:09:D3:0B:BC:40:80:DB:4C:38:65:D0:49:86:E3:"
-                        + "D3:70:6C:7C:54:AB:DB:82:54:48:10:77:1F",
+        contains(yaml, "EXPECTED_CERT_SHA256: 68:0F:21:43:F9:34:16:28:C5:C2:D7:53:64:8F:8E:35:0D:18:95:C6:FC:B9:12:0B:27:86:ED:39:6D:0E:3C:53",
                 "the permanent JARVIS certificate is pinned in the workflow");
         contains(yaml, "sha256sum", "the APK checksum file is generated");
         contains(yaml, "\"schema\": 1", "the manifest schema stays 1 for older Orbit installs");
