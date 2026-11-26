@@ -70,7 +70,7 @@ jobs:
           from pathlib import Path
 
           raw = os.environ["JARVIS_KEYSTORE_B64"]
-          compact = re.sub(r"\\s+", "", raw)
+          compact = re.sub(r"\s+", "", raw)
           if not compact or not re.fullmatch(r"[A-Za-z0-9+/]*={0,2}", compact):
               raise SystemExit("::error::Keystore secret is not plain standard Base64. Copy only the complete Base64 text, without labels or quotes.")
           unpadded = compact.rstrip("=")
