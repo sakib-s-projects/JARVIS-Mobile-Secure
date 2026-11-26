@@ -19,11 +19,11 @@ import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowToast;
 
-/** About & updates links to Orbit's repository, in the browser, without any way to crash. */
+/** About & updates links to JARVIS's repository, in the browser, without any way to crash. */
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = {29, 35})
 public class AboutLinksTest {
-    private static final String REPO = "https://github.com/lpnovi/Orbit-Assistant";
+    private static final String REPO = "https://github.com/sakib-s-projects/JARVIS-Mobile-Secure";
 
     @org.junit.Before public void setUp() {
         TestWorkManager.ensureInitialized(RuntimeEnvironment.getApplication());
