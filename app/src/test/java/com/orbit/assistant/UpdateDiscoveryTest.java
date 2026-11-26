@@ -36,7 +36,7 @@ import java.util.List;
 public final class UpdateDiscoveryTest {
 
     static final String CERTIFICATE_SHA256 =
-            "7D:AD:61:93:85:DF:F1:1E:C7:31:AA:55:5F:2B:44:8A:94:3C:73:91:81:3D:1A:94:DF:1C:B4:23:2E:CD:41:E3";
+            "36:F3:50:AF:14:09:D3:0B:BC:40:80:DB:4C:38:65:D0:49:86:E3:D3:70:6C:7C:54:AB:DB:82:54:48:10:77:1F";
     static final String APK_SHA256 =
             "a1b2c3d4e5f6071829304152637485960718293a4b5c6d7e8f90112233445566";
     private static final String DOWNLOAD_BASE =
