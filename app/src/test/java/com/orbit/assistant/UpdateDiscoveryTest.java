@@ -14,6 +14,8 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -86,6 +88,23 @@ public final class UpdateDiscoveryTest {
         }
         assertFalse("sixth redirect must be refused", OrbitUpdater.canFollowRedirect(5));
         assertFalse("negative redirect count is invalid", OrbitUpdater.canFollowRedirect(-1));
+    }
+
+    @Test public void apkChecksumVerificationMatchesActualFileBytes() throws Exception {
+        File apk = File.createTempFile("jarvis-checksum-", ".apk");
+        try {
+            try (FileOutputStream out = new FileOutputStream(apk)) {
+                out.write("abc".getBytes("UTF-8"));
+            }
+            assertTrue(OrbitUpdater.matchesApkChecksum(apk,
+                    "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"));
+            assertFalse(OrbitUpdater.matchesApkChecksum(apk,
+                    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
+            assertFalse(OrbitUpdater.matchesApkChecksum(apk, "not-a-sha256"));
+            assertFalse(OrbitUpdater.matchesApkChecksum(apk, null));
+        } finally {
+            if (apk.exists()) assertTrue("temporary checksum fixture should be deleted", apk.delete());
+        }
     }
 
     // ---- structural eligibility -------------------------------------------------------------------
