@@ -380,6 +380,56 @@ public final class UpdateDiscoveryTest {
         }
     }
 
+    @Test public void invalidVersionCodesAreRejected() throws Exception {
+        rejects(release("v0.9.9.9", false, false), manifest("0.9.9.9", 0L),
+                Prefs.CHANNEL_STABLE, "a zero versionCode");
+        rejects(release("v0.9.9.9", false, false), manifest("0.9.9.9", -1L),
+                Prefs.CHANNEL_STABLE, "a negative versionCode");
+    }
+
+    @Test public void missingApkAssetIsRejected() throws Exception {
+        JSONObject release = release("v0.9.9.9", false, false);
+        JSONArray assets = release.getJSONArray("assets");
+        JSONArray remaining = new JSONArray();
+        for (int i = 0; i < assets.length(); i++) {
+            JSONObject asset = assets.getJSONObject(i);
+            if (!"Orbit-Assistant-v0.9.9.9.apk".equals(asset.getString("name"))) {
+                remaining.put(asset);
+            }
+        }
+        release.put("assets", remaining);
+        rejects(release, manifest("0.9.9.9", 99999L), Prefs.CHANNEL_STABLE,
+                "a release without its APK asset");
+    }
+
+    @Test public void apkAssetSizeMustBePositiveAndWithinTheLimit() throws Exception {
+        for (long size : new long[]{0L, -1L, 524288001L}) {
+            JSONObject release = release("v0.9.9.9", false, false);
+            JSONArray assets = release.getJSONArray("assets");
+            for (int i = 0; i < assets.length(); i++) {
+                JSONObject asset = assets.getJSONObject(i);
+                if ("Orbit-Assistant-v0.9.9.9.apk".equals(asset.getString("name"))) {
+                    asset.put("size", size);
+                }
+            }
+            rejects(release, manifest("0.9.9.9", 99999L), Prefs.CHANNEL_STABLE,
+                    "an APK asset with invalid size " + size);
+        }
+    }
+
+    @Test public void apkAssetMustUseTheExactOfficialReleaseUrl() throws Exception {
+        JSONObject release = release("v0.9.9.9", false, false);
+        JSONArray assets = release.getJSONArray("assets");
+        for (int i = 0; i < assets.length(); i++) {
+            JSONObject asset = assets.getJSONObject(i);
+            if ("Orbit-Assistant-v0.9.9.9.apk".equals(asset.getString("name"))) {
+                asset.put("browser_download_url", "https://github.com.attacker.test/fake.apk");
+            }
+        }
+        rejects(release, manifest("0.9.9.9", 99999L), Prefs.CHANNEL_STABLE,
+                "an APK asset with a forged download URL");
+    }
+
     /** The manifest schema v0.7.7.3 shipped must keep working unchanged. */
     @Test public void theManifestSchemaIsUnchangedFromTheReleaseBefore() throws Exception {
         JSONObject manifest = manifest("0.9.9.9", 99999L);
