@@ -109,7 +109,7 @@ public final class ReleaseNotesOrderingTest {
 
     @Test public void aMissingTitleFallsBackToTheTag() throws Exception {
         JSONObject object = published("v0.7.2.15").put("name", "");
-        assertEquals("Orbit Assistant v0.7.2.15",
+        assertEquals("JARVIS Assistant v0.7.2.15",
                 ReleaseNotesRepository.parseRelease(object).title);
     }
 
