@@ -50,6 +50,23 @@ public final class UpdateDiscoveryTest {
                 OrbitEdition.releaseDownloadBase());
     }
 
+    // ---- trusted update hosts ----------------------------------------------------------------------
+
+    @Test public void updateHostAllowlistAcceptsOnlyGitHubOwnedDownloadHosts() {
+        for (String host : new String[]{"github.com", "api.github.com",
+                "raw.githubusercontent.com", "release-assets.githubusercontent.com",
+                "objects.githubusercontent.com", "subdomain.githubusercontent.com"}) {
+            assertTrue(host, OrbitUpdater.isAllowedUpdateHost(host));
+        }
+        for (String host : new String[]{"github.com.attacker.test", "api.github.com.evil",
+                "notgithub.com", "githubusercontent.com.attacker.test",
+                "notgithubusercontent.com", "localhost", "127.0.0.1", "example.com"}) {
+            assertFalse(host, OrbitUpdater.isAllowedUpdateHost(host));
+        }
+        assertTrue("host matching is case-insensitive",
+                OrbitUpdater.isAllowedUpdateHost("API.GITHUB.COM"));
+        assertFalse("a missing host is never trusted", OrbitUpdater.isAllowedUpdateHost(null));
+    }
     // ---- structural eligibility -------------------------------------------------------------------
 
     @Test public void aNormalStableReleaseIsEligibleInBothChannels() {
