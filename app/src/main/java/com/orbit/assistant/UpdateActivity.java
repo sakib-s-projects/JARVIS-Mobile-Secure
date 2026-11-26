@@ -109,7 +109,7 @@ public final class UpdateActivity extends Activity {
         titles.setPadding(UiKit.dp(this, 13), 0, 0, 0);
         titles.addView(UiKit.text(this, "About & updates", 24, UiKit.TEXT, true));
         titles.addView(UiKit.text(this, OrbitDistribution.isPlay()
-                ? "Orbit from Google Play" : "Official Orbit releases", 13, UiKit.MUTED, false));
+                ? "Orbit from Google Play" : "Official JARVIS releases", 13, UiKit.MUTED, false));
         header.addView(titles, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         page.addView(header);
@@ -225,7 +225,7 @@ public final class UpdateActivity extends Activity {
 
         TextView privacy = UiKit.text(this, OrbitDistribution.isPlay()
                 ? "This copy of Orbit was installed from Google Play, which delivers and verifies its updates. Orbit itself never downloads or installs app updates."
-                : "Orbit checks only the public lpnovi/Orbit-Assistant releases — stable releases, plus official Beta prereleases when you have joined the Beta channel. It sends no account credentials, never downloads without your approval, verifies the APK checksum, package, version and permanent signing certificate, then uses Android's normal installer. Every build is verified the same way, whichever channel it came from.",
+                : "Orbit checks only the public JARVIS GitHub releases — stable releases, plus official Beta prereleases when you have joined the Beta channel. It sends no account credentials, never downloads without your approval, verifies the APK checksum, package, version and permanent signing certificate, then uses Android's normal installer. Every build is verified the same way, whichever channel it came from.",
                 12, UiKit.MUTED, false);
         privacy.setLineSpacing(0, 1.12f);
         LinearLayout.LayoutParams privacyLp = new LinearLayout.LayoutParams(
@@ -252,7 +252,7 @@ public final class UpdateActivity extends Activity {
     /** Everything on the Links card, in order. A new link is one more entry here. */
     static final AboutLink[] LINKS = {
             new AboutLink("GitHub", "Source code, releases and issues",
-                    "https://github.com/lpnovi/Orbit-Assistant"),
+                    "https://github.com/sakib-s-projects/JARVIS-Mobile-Secure"),
     };
 
     private TextView linksSection() {
@@ -608,7 +608,7 @@ public final class UpdateActivity extends Activity {
 
     private void showAvailableState(OrbitUpdater.Release release, boolean showDialog) {
         hideDownloadProgress();
-        status.setText("Update available: Orbit Assistant v" + release.displayName());
+        status.setText("Update available: JARVIS Assistant v" + release.displayName());
         status.setTextColor(UiKit.accent(this));
         setAction("View update", () -> showUpdateDialog(release), true);
         if (showDialog) showUpdateDialog(release);
