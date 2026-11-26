@@ -430,6 +430,48 @@ public final class UpdateDiscoveryTest {
                 "an APK asset with a forged download URL");
     }
 
+    @Test public void apkMetadataAcceptsOnlyExactNewerSingleSignerRelease() throws Exception {
+        OrbitUpdater.validateApkMetadata("com.orbit.assistant", 99999L, "0.9.9.9",
+                99999L, "0.9.9.9", false, 1, CERTIFICATE_SHA256, CERTIFICATE_SHA256, 99998L);
+    }
+
+    @Test public void apkMetadataRejectsWrongPackageAndVersion() {
+        rejectsApkMetadata("com.example.other", 99999L, "0.9.9.9",
+                99999L, "0.9.9.9", false, 1, CERTIFICATE_SHA256, CERTIFICATE_SHA256, 99998L);
+        rejectsApkMetadata("com.orbit.assistant", 99998L, "0.9.9.9",
+                99999L, "0.9.9.9", false, 1, CERTIFICATE_SHA256, CERTIFICATE_SHA256, 99997L);
+        rejectsApkMetadata("com.orbit.assistant", 99999L, "0.9.9.8",
+                99999L, "0.9.9.9", false, 1, CERTIFICATE_SHA256, CERTIFICATE_SHA256, 99998L);
+    }
+
+    @Test public void apkMetadataRejectsDowngradesAndInvalidSignerSets() {
+        rejectsApkMetadata("com.orbit.assistant", 99998L, "0.9.9.9",
+                99998L, "0.9.9.9", false, 1, CERTIFICATE_SHA256, CERTIFICATE_SHA256, 99998L);
+        rejectsApkMetadata("com.orbit.assistant", 99999L, "0.9.9.9",
+                99999L, "0.9.9.9", true, 2, CERTIFICATE_SHA256, CERTIFICATE_SHA256, 99998L);
+        rejectsApkMetadata("com.orbit.assistant", 99999L, "0.9.9.9",
+                99999L, "0.9.9.9", false, 0, CERTIFICATE_SHA256, CERTIFICATE_SHA256, 99998L);
+        rejectsApkMetadata("com.orbit.assistant", 99999L, "0.9.9.9",
+                99999L, "0.9.9.9", false, 1, "00", CERTIFICATE_SHA256, 99998L);
+        rejectsApkMetadata("com.orbit.assistant", 99999L, "0.9.9.9",
+                99999L, "0.9.9.9", false, 1, CERTIFICATE_SHA256, "00", 99998L);
+    }
+
+    private static void rejectsApkMetadata(String packageName, long versionCode, String versionName,
+                                          long expectedVersionCode, String expectedVersionName,
+                                          boolean multipleSigners, int signerCount,
+                                          String actualCertificate, String releaseCertificate,
+                                          long installedVersionCode) {
+        try {
+            OrbitUpdater.validateApkMetadata(packageName, versionCode, versionName,
+                    expectedVersionCode, expectedVersionName, multipleSigners, signerCount,
+                    actualCertificate, releaseCertificate, installedVersionCode);
+            fail("APK metadata must be rejected");
+        } catch (Exception expected) {
+            // Invalid APK metadata must fail closed.
+        }
+    }
+
     /** The manifest schema v0.7.7.3 shipped must keep working unchanged. */
     @Test public void theManifestSchemaIsUnchangedFromTheReleaseBefore() throws Exception {
         JSONObject manifest = manifest("0.9.9.9", 99999L);
