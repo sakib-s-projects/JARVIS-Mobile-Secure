@@ -55,12 +55,13 @@ public final class UpdateDiscoveryTest {
     @Test public void updateHostAllowlistAcceptsOnlyGitHubOwnedDownloadHosts() {
         for (String host : new String[]{"github.com", "api.github.com",
                 "raw.githubusercontent.com", "release-assets.githubusercontent.com",
-                "objects.githubusercontent.com", "subdomain.githubusercontent.com"}) {
+                "objects.githubusercontent.com"}) {
             assertTrue(host, OrbitUpdater.isAllowedUpdateHost(host));
         }
         for (String host : new String[]{"github.com.attacker.test", "api.github.com.evil",
                 "notgithub.com", "githubusercontent.com.attacker.test",
-                "notgithubusercontent.com", "localhost", "127.0.0.1", "example.com"}) {
+                "notgithubusercontent.com", "attacker.githubusercontent.com",
+                "localhost", "127.0.0.1", "example.com"}) {
             assertFalse(host, OrbitUpdater.isAllowedUpdateHost(host));
         }
         assertTrue("host matching is case-insensitive",
