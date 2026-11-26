@@ -460,28 +460,12 @@ public final class OrbitUpdater {
         if (info == null || info.signingInfo == null) {
             throw new VerificationException("Android could not inspect the downloaded APK.");
         }
-        if (!PACKAGE_NAME.equals(info.packageName)) {
-            throw new VerificationException("The downloaded APK has the wrong package name.");
-        }
-        if (info.getLongVersionCode() != release.versionCode ||
-                !release.versionName.equals(info.versionName)) {
-            throw new VerificationException("The downloaded APK version does not match the release manifest.");
-        }
-        if (info.getLongVersionCode() <= BuildConfig.VERSION_CODE) {
-            throw new VerificationException("The downloaded APK is not newer than this JARVIS installation.");
-        }
-        if (info.signingInfo.hasMultipleSigners()) {
-            throw new VerificationException("The downloaded APK has an unexpected signer set.");
-        }
         Signature[] signers = info.signingInfo.getApkContentsSigners();
-        if (signers == null || signers.length != 1) {
-            throw new VerificationException("The downloaded APK signer could not be verified.");
-        }
-        String certificate = hex(MessageDigest.getInstance("SHA-256").digest(signers[0].toByteArray()));
-        if (!normalizeSha256(certificate).equals(normalizeSha256(CERTIFICATE_SHA256)) ||
-                !normalizeSha256(release.certificateSha256).equals(normalizeSha256(CERTIFICATE_SHA256))) {
-            throw new VerificationException("The downloaded APK is not signed by JARVIS's permanent certificate.");
-        }
+        String certificate = signers == null || signers.length != 1 ? ""
+                : hex(MessageDigest.getInstance("SHA-256").digest(signers[0].toByteArray()));
+        validateApkMetadata(info.packageName, info.getLongVersionCode(), info.versionName,
+                info.signingInfo.hasMultipleSigners(), signers == null ? 0 : signers.length,
+                certificate, release.certificateSha256, BuildConfig.VERSION_CODE);
         log("verification_complete", "package_version_certificate_valid");
     }
 
@@ -836,6 +820,29 @@ public final class OrbitUpdater {
                 out.write(buffer, 0, read);
             }
             return out.toByteArray();
+        }
+    }
+
+    /** Pure metadata/signature gate, separated so every rejection path can be unit-tested. */
+    static void validateApkMetadata(String packageName, long versionCode, String versionName,
+                                    boolean multipleSigners, int signerCount,
+                                    String actualCertificateSha256, String releaseCertificateSha256,
+                                    long installedVersionCode) throws Exception {
+        if (!PACKAGE_NAME.equals(packageName)) {
+            throw new VerificationException("The downloaded APK has the wrong package name.");
+        }
+        if (versionCode <= 0L || versionCode <= installedVersionCode) {
+            throw new VerificationException("The downloaded APK is not newer than this JARVIS installation.");
+        }
+        if (versionCode != 0L && (versionName == null || versionName.trim().isEmpty())) {
+            throw new VerificationException("The downloaded APK version name is invalid.");
+        }
+        if (multipleSigners || signerCount != 1) {
+            throw new VerificationException("The downloaded APK has an unexpected signer set.");
+        }
+        if (!normalizeSha256(actualCertificateSha256).equals(normalizeSha256(CERTIFICATE_SHA256)) ||
+                !normalizeSha256(releaseCertificateSha256).equals(normalizeSha256(CERTIFICATE_SHA256))) {
+            throw new VerificationException("The downloaded APK is not signed by JARVIS's permanent certificate.");
         }
     }
 
