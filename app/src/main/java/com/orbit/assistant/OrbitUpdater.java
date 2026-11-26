@@ -450,7 +450,7 @@ public final class OrbitUpdater {
         if (!candidate.getPath().startsWith(root.getPath() + File.separator) || !candidate.isFile()) {
             throw new VerificationException("The downloaded update file is unavailable.");
         }
-        if (!normalizeSha256(sha256(candidate)).equals(normalizeSha256(release.apkSha256))) {
+        if (!matchesApkChecksum(candidate, release.apkSha256)) {
             throw new VerificationException("The downloaded APK checksum did not match the official release.");
         }
 
@@ -837,6 +837,12 @@ public final class OrbitUpdater {
             }
             return out.toByteArray();
         }
+    }
+
+    static boolean matchesApkChecksum(File file, String expectedSha256) throws Exception {
+        return file != null && file.isFile() && expectedSha256 != null
+                && SHA256_PATTERN.matcher(expectedSha256).matches()
+                && normalizeSha256(sha256(file)).equals(normalizeSha256(expectedSha256));
     }
 
     private static String sha256(File file) throws Exception {
