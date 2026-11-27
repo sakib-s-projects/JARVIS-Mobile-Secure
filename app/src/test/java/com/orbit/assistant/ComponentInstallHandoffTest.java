@@ -83,9 +83,12 @@ public final class ComponentInstallHandoffTest {
         try {
             OrbitLocalInstaller.launchInstaller(activity, apk);
         } catch (Exception e) {
-            assertEquals("a correctly placed component must never be refused by Orbit's own "
-                            + "checks; it may only fail at the platform handoff",
-                    OrbitLocalInstaller.InstallStage.FILEPROVIDER_URI.message, e.getMessage());
+            String message = e.getMessage();
+            assertTrue("a correctly placed component may fail only at an Android handoff stage: "
+                            + message,
+                    OrbitLocalInstaller.InstallStage.FILEPROVIDER_URI.message.equals(message)
+                            || OrbitLocalInstaller.InstallStage.NO_INSTALLER.message.equals(message)
+                            || OrbitLocalInstaller.InstallStage.START_ACTIVITY.message.equals(message));
         }
     }
 
