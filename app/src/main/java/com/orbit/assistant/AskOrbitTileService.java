@@ -1,5 +1,6 @@
 package com.orbit.assistant;
 
+import android.annotation.SuppressLint;
 import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Intent;
@@ -15,6 +16,13 @@ public final class AskOrbitTileService extends TileService {
         static void start(TileService service, PendingIntent pending) {
             service.startActivityAndCollapse(pending);
         }
+    }
+
+    // Android 10–13 only: the PendingIntent overload is API 34+. Keep this
+    // deprecated overload isolated to the guarded legacy path for compatibility.
+    @SuppressLint("StartActivityAndCollapseDeprecated")
+    private static void startLegacy(TileService service, Intent intent) {
+        service.startActivityAndCollapse(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 
     @Override public void onStartListening() {
@@ -54,6 +62,6 @@ public final class AskOrbitTileService extends TileService {
                 : QuickSettingsTiles.orbitPagePendingIntent(this, 6501,
                         new Intent(this, SettingsActivity.class), intent);
         if (Build.VERSION.SDK_INT >= 34) Api34.start(this, pending);
-        else startActivityAndCollapse(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        else startLegacy(this, intent);
     }
 }
