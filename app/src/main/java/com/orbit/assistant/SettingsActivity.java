@@ -1230,12 +1230,13 @@ public class SettingsActivity extends Activity implements UiKit.AppearanceListen
      * code sign-in, and Orbit never switches methods without the user choosing to.
      */
     private void confirmUnofficialChatGptAuth(Runnable proceed) {
-        new AlertDialog.Builder(this)
-                .setTitle("Experimental ChatGPT account connection")
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Experimental ChatGPT account connection")
                 .setMessage("This sign-in uses an undocumented OpenAI/Codex account interface, not the official OpenAI API. OpenAI may change or block it at any time. Gemini through the official API is the recommended default. Continue only if you understand this risk.")
                 .setNegativeButton("Cancel", null)
-                .setPositiveButton("Continue", (d, w) -> proceed.run())
-                .show();
+                .setPositiveButton("Continue", (d, w) -> proceed.run());
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
     private void startChatGptLogin() {
