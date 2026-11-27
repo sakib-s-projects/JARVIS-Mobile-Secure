@@ -21,7 +21,7 @@ import android.widget.Toast;
 import java.io.File;
 import java.util.Locale;
 
-/** Orbit-styled stable-release update UI. Installation always remains user-confirmed Android UI. */
+/** JARVIS-styled stable-release update UI. Installation always remains user-confirmed Android UI. */
 public final class UpdateActivity extends Activity {
     private TextView status;
     private TextView channelValue;
@@ -109,12 +109,12 @@ public final class UpdateActivity extends Activity {
         titles.setPadding(UiKit.dp(this, 13), 0, 0, 0);
         titles.addView(UiKit.text(this, "About & updates", 24, UiKit.TEXT, true));
         titles.addView(UiKit.text(this, OrbitDistribution.isPlay()
-                ? "Orbit from Google Play" : "Official Orbit releases", 13, UiKit.MUTED, false));
+                ? "JARVIS from Google Play" : "Official JARVIS releases", 13, UiKit.MUTED, false));
         header.addView(titles, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         page.addView(header);
 
-        TextView section = UiKit.text(this, "ORBIT ASSISTANT", 12, UiKit.MUTED, true);
+        TextView section = UiKit.text(this, "JARVIS ASSISTANT", 12, UiKit.MUTED, true);
         section.setLetterSpacing(0.13f);
         LinearLayout.LayoutParams sectionLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -135,7 +135,7 @@ public final class UpdateActivity extends Activity {
         LinearLayout nameRow = new LinearLayout(this);
         nameRow.setOrientation(LinearLayout.HORIZONTAL);
         nameRow.setGravity(Gravity.CENTER_VERTICAL);
-        nameRow.addView(UiKit.text(this, "Orbit Assistant", 18, UiKit.TEXT, true));
+        nameRow.addView(UiKit.text(this, "JARVIS", 18, UiKit.TEXT, true));
         if (OrbitVersion.installedIsBeta()) {
             TextView pill = betaPill("BETA BUILD");
             LinearLayout.LayoutParams pillLp = new LinearLayout.LayoutParams(
@@ -210,7 +210,7 @@ public final class UpdateActivity extends Activity {
         roadmapCopy.setOrientation(LinearLayout.VERTICAL);
         roadmapCopy.addView(UiKit.text(this, "Roadmap", 17, UiKit.TEXT, true));
         TextView roadmapDescription = UiKit.text(this,
-                "See what's next for Orbit", 12, UiKit.MUTED, false);
+                "See what's next for JARVIS", 12, UiKit.MUTED, false);
         roadmapDescription.setPadding(0, UiKit.dp(this, 3), 0, 0);
         roadmapCopy.addView(roadmapDescription);
         roadmap.addView(roadmapCopy, new LinearLayout.LayoutParams(
@@ -224,8 +224,8 @@ public final class UpdateActivity extends Activity {
         page.addView(linksCard());
 
         TextView privacy = UiKit.text(this, OrbitDistribution.isPlay()
-                ? "This copy of Orbit was installed from Google Play, which delivers and verifies its updates. Orbit itself never downloads or installs app updates."
-                : "Orbit checks only the public sakib-s-projects/JARVIS-Mobile-Secure releases — stable releases, plus official Beta prereleases when you have joined the Beta channel. It sends no account credentials, never downloads without your approval, verifies the APK checksum, package, version and permanent signing certificate, then uses Android's normal installer. Every build is verified the same way, whichever channel it came from.",
+                ? "This copy of JARVIS was installed from Google Play, which delivers and verifies its updates. JARVIS itself never downloads or installs app updates."
+                : "JARVIS checks only the public sakib-s-projects/JARVIS-Mobile-Secure releases — stable releases, plus official Beta prereleases when you have joined the Beta channel. It sends no account credentials, never downloads without your approval, verifies the APK checksum, package, version and permanent signing certificate, then uses Android's normal installer. Every build is verified the same way, whichever channel it came from.",
                 12, UiKit.MUTED, false);
         privacy.setLineSpacing(0, 1.12f);
         LinearLayout.LayoutParams privacyLp = new LinearLayout.LayoutParams(
