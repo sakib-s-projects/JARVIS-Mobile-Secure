@@ -6,6 +6,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -14,6 +15,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import javax.net.ssl.SSLException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -184,10 +186,17 @@ final class GeminiProvider implements AiProvider {
         }
         return out.toString();
     }
-    private static boolean retryable(Exception e) {
-        if (!(e instanceof HttpFailure)) return true;
-        int c=((HttpFailure)e).code;
-        return c == 404 || c == 408 || c == 429 || c == 500 || c == 502 || c == 503 || c == 504;
+    static boolean retryable(Exception e) {
+        if (e instanceof HttpFailure) return retryableHttpStatus(((HttpFailure)e).code);
+        // Retry transient transport failures, but do not retry certificate/TLS failures or
+        // malformed responses across every model. Those failures are not model-specific.
+        if (e instanceof SSLException) return false;
+        return e instanceof IOException;
+    }
+
+    static boolean retryableHttpStatus(int code) {
+        return code == 404 || code == 408 || code == 429 || code == 500
+                || code == 502 || code == 503 || code == 504;
     }
     private static String safeError(Exception e) {
         if (e instanceof HttpFailure) {
