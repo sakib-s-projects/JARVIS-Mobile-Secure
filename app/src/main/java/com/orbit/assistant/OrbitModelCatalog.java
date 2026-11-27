@@ -37,6 +37,11 @@ public final class OrbitModelCatalog {
     public static final String CLAUDE_SONNET_5_5 = "claude-sonnet-5-5";
     public static final String CLAUDE_HAIKU_4_5 = "claude-haiku-4-5-20251001";
     public static final String GROK_4_7 = "grok-4.7";
+    public static final String GEMINI_38_FLASH = "gemini-3.8-flash";
+    public static final String GEMINI_36_FLASH = "gemini-3.6-flash";
+    public static final String GEMINI_35_FLASH = "gemini-3.5-flash";
+    public static final String GEMINI_35_FLASH_LITE = "gemini-3.5-flash-lite";
+    public static final String GEMINI_31_FLASH_LITE = "gemini-3.1-flash-lite";
     /** OpenRouter's own router (0.8.3.0-beta.6+): an explicit OpenRouter model, never Orbit Auto. */
     public static final String OPENROUTER_AUTO = "openrouter/auto";
     /** Exact OpenRouter slugs Orbit Auto may use once OpenRouter is enabled for it. */
@@ -111,6 +116,20 @@ public final class OrbitModelCatalog {
                     "Fast everyday answers", null, 200_000,
                     true, true, true, false, new AiStrength[0])));
 
+    /** Official Gemini Developer API Flash models; the first is the preferred default. */
+    private static final List<AiModelSpec> GEMINI = Collections.unmodifiableList(Arrays.asList(
+            gemini(GEMINI_38_FLASH, "Gemini 3.8 Flash", "Preferred free-tier model"),
+            gemini(GEMINI_36_FLASH, "Gemini 3.6 Flash", "Fallback"),
+            gemini(GEMINI_35_FLASH, "Gemini 3.5 Flash", "Fallback; API may route to 3.6 Flash"),
+            gemini(GEMINI_35_FLASH_LITE, "Gemini 3.5 Flash-Lite", "Low-latency fallback"),
+            gemini(GEMINI_31_FLASH_LITE, "Gemini 3.1 Flash-Lite", "Older fallback")));
+
+    private static AiModelSpec gemini(String id, String name, String descriptor) {
+        return new AiModelSpec(id, name, "Gemini Flash", Prefs.PROVIDER_GEMINI, descriptor,
+                null, true, 1_000_000, false, false, true, false, false, false,
+                "static_official", "active", new AiStrength[0]);
+    }
+
     /** Trusted fallback while xAI's account-scoped language-model catalog is unavailable. */
     private static final List<AiModelSpec> XAI = Collections.singletonList(
             cloud(GROK_4_7, "Grok 4.7", "Grok 4", Prefs.PROVIDER_XAI,
@@ -183,6 +202,7 @@ public final class OrbitModelCatalog {
         if (Prefs.PROVIDER_ANTHROPIC.equals(providerId)) return dynamicAnthropic.isEmpty()
                 ? ANTHROPIC : dynamicAnthropic;
         if (Prefs.PROVIDER_XAI.equals(providerId)) return dynamicXai.isEmpty() ? XAI : dynamicXai;
+        if (Prefs.PROVIDER_GEMINI.equals(providerId)) return GEMINI;
         if (Prefs.PROVIDER_OPENROUTER.equals(providerId)) return dynamicOpenRouter.isEmpty()
                 ? OPENROUTER : dynamicOpenRouter;
         return Collections.emptyList();
