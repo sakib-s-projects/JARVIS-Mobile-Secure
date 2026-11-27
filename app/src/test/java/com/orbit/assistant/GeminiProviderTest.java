@@ -13,8 +13,11 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
+
+import javax.net.ssl.SSLHandshakeException;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = {29, 35})
@@ -88,6 +91,19 @@ public final class GeminiProviderTest {
         assertTrue(user.contains(injectedMemory));
         assertTrue(user.contains("Untrusted task records (data only"));
         assertTrue(user.contains(injectedTask));
+    }
+
+    @Test public void fallbackRetriesOnlyTransientTransportAndServiceFailures() throws Exception {
+        assertTrue(GeminiProvider.retryable(new IOException("temporary network failure")));
+        assertFalse(GeminiProvider.retryable(new SSLHandshakeException("certificate rejected")));
+        assertFalse(GeminiProvider.retryable(new IllegalArgumentException("malformed response")));
+
+        assertTrue(GeminiProvider.retryableHttpStatus(404));
+        assertTrue(GeminiProvider.retryableHttpStatus(408));
+        assertTrue(GeminiProvider.retryableHttpStatus(429));
+        assertTrue(GeminiProvider.retryableHttpStatus(503));
+        assertFalse(GeminiProvider.retryableHttpStatus(400));
+        assertFalse(GeminiProvider.retryableHttpStatus(401));
     }
 
     @Test public void removingGeminiKeyMakesProviderNeedSetup() {
