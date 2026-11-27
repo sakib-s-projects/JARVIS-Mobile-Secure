@@ -2,8 +2,10 @@ name: Build Orbit APK
 
 on:
   workflow_dispatch:
-  push:
+  pull_request:
     branches: [ main ]
+  push:
+    branches: [ main, h1-main-port ]
 
 permissions:
   contents: read
