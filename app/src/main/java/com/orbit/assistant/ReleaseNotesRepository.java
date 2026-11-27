@@ -22,7 +22,7 @@ import java.util.regex.Pattern;
 
 /** Public GitHub stable-release notes with a private, last-known-good offline cache. */
 public final class ReleaseNotesRepository {
-    private static final String REPO = "https://api.github.com/repos/lpnovi/Orbit-Assistant";
+    private static final String REPO = "https://api.github.com/repos/sakib-s-projects/JARVIS-Mobile-Secure";
     private static final String API_LATEST = REPO + "/releases/latest";
     private static final String API_TAGS = REPO + "/tags?per_page=15";
     private static final String API_BY_TAG = REPO + "/releases/tags/";
