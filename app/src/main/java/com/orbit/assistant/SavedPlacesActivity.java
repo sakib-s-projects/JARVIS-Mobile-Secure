@@ -264,6 +264,12 @@ public final class SavedPlacesActivity extends Activity {
             } else Toast.makeText(this, "Could not get a current location fix.", Toast.LENGTH_SHORT).show();
             return;
         }
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            button.setEnabled(true);
+            Toast.makeText(this, "Allow location access first.", Toast.LENGTH_SHORT).show();
+            return;
+        }
         button.setEnabled(false);
         final Location fallback = cached;
         final String chosen = provider;

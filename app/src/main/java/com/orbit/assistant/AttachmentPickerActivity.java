@@ -198,7 +198,7 @@ public final class AttachmentPickerActivity extends Activity {
         if (data != null) {
             int flags = data.getFlags() & Intent.FLAG_GRANT_READ_URI_PERMISSION;
             for (Uri uri : uris) {
-                try { getContentResolver().takePersistableUriPermission(uri, flags); }
+                try { getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); }
                 catch (Exception ignored) {}
             }
         }

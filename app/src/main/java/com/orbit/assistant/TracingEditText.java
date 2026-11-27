@@ -3,7 +3,7 @@ package com.orbit.assistant;
 import android.content.Context;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
-import android.widget.EditText;
+import androidx.appcompat.widget.AppCompatEditText;
 
 /**
  * An {@link EditText} that records the moments Android's input-method machinery interacts with it.
@@ -21,7 +21,7 @@ import android.widget.EditText;
  * all three. Behaviour is deliberately unchanged: the superclass builds the connection and this
  * class returns exactly what it produced.
  */
-public class TracingEditText extends EditText {
+public class TracingEditText extends AppCompatEditText {
     private int connectionsCreated;
 
     public TracingEditText(Context context) {

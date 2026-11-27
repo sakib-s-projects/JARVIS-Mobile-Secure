@@ -1,0 +1,166 @@
+name: Verify JARVIS release signing (no publish)
+
+on:
+  push:
+    branches:
+      - h1-main-port
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jarvis-release-signing-verification
+  cancel-in-progress: false
+
+env:
+  EXPECTED_CERT_SHA256: 84:D3:41:4B:60:EA:65:74:E0:A0:E2:72:18:84:F4:D8:F8:9D:39:09:AA:72:64:3F:CE:F0:2C:14:93:A0:68:8F
+  EXPECTED_PACKAGE_NAME: com.orbit.assistant
+  EXPECTED_COMPONENT_PACKAGE_NAME: com.orbit.assistant.local
+
+jobs:
+  verify-signing:
+    name: Build and verify signed APKs without publishing
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out current branch source
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Prepare and validate release keystore
+        shell: bash
+        env:
+          ORBIT_RELEASE_KEYSTORE_B64: ${{ secrets.ORBIT_RELEASE_KEYSTORE_B64 }}
+          ORBIT_RELEASE_STORE_PASSWORD: ${{ secrets.ORBIT_RELEASE_STORE_PASSWORD }}
+          ORBIT_RELEASE_KEY_PASSWORD: ${{ secrets.ORBIT_RELEASE_KEY_PASSWORD }}
+          ORBIT_RELEASE_KEY_ALIAS: ${{ secrets.ORBIT_RELEASE_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          for name in ORBIT_RELEASE_KEYSTORE_B64 ORBIT_RELEASE_STORE_PASSWORD ORBIT_RELEASE_KEY_PASSWORD ORBIT_RELEASE_KEY_ALIAS; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Required signing secret ${name} is missing or empty."
+              exit 1
+            fi
+          done
+          keystore_path="${RUNNER_TEMP}/jarvis-release.jks"
+          export JARVIS_KEYSTORE_B64="${ORBIT_RELEASE_KEYSTORE_B64}"
+          python3 - <<'PY'
+          import base64
+          import os
+          import re
+          from pathlib import Path
+
+          raw = os.environ["JARVIS_KEYSTORE_B64"]
+          compact = re.sub(r"\s+", "", raw)
+          if not compact or not re.fullmatch(r"[A-Za-z0-9+/]*={0,2}", compact):
+              raise SystemExit("::error::Keystore secret is not plain standard Base64. Copy only the complete Base64 text, without labels or quotes.")
+          unpadded = compact.rstrip("=")
+          if len(unpadded) % 4 == 1:
+              raise SystemExit("::error::Keystore Base64 is truncated or malformed (invalid encoded length).")
+          normalized = unpadded + ("=" * ((4 - len(unpadded) % 4) % 4))
+          try:
+              decoded = base64.b64decode(normalized, validate=True)
+          except Exception:
+              raise SystemExit("::error::Keystore Base64 could not be decoded. Re-copy the complete value from the backup file.")
+          if not decoded:
+              raise SystemExit("::error::Decoded keystore is empty.")
+          Path(os.environ["RUNNER_TEMP"], "jarvis-release.jks").write_bytes(decoded)
+          PY
+          chmod 600 "${keystore_path}"
+          test -s "${keystore_path}"
+          keytool -list -v -keystore "${keystore_path}" \
+            -storepass "${ORBIT_RELEASE_STORE_PASSWORD}" \
+            -alias "${ORBIT_RELEASE_KEY_ALIAS}" > "${RUNNER_TEMP}/jarvis-keytool.txt"
+          actual_cert="$(sed -n 's/^[[:space:]]*SHA256: //p' "${RUNNER_TEMP}/jarvis-keytool.txt" | head -n 1 | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          expected_cert="$(printf '%s' "${EXPECTED_CERT_SHA256}" | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          if [[ -z "${actual_cert}" || "${actual_cert}" != "${expected_cert}" ]]; then
+            echo "::error::Keystore certificate fingerprint does not match the pinned JARVIS certificate."
+            exit 1
+          fi
+          echo "Keystore alias and pinned SHA-256 certificate verified."
+
+      - name: Build signed release APKs
+        shell: bash
+        env:
+          ORBIT_RELEASE_STORE_FILE: ${{ runner.temp }}/jarvis-release.jks
+          ORBIT_RELEASE_STORE_PASSWORD: ${{ secrets.ORBIT_RELEASE_STORE_PASSWORD }}
+          ORBIT_RELEASE_KEY_PASSWORD: ${{ secrets.ORBIT_RELEASE_KEY_PASSWORD }}
+          ORBIT_RELEASE_KEY_ALIAS: ${{ secrets.ORBIT_RELEASE_KEY_ALIAS }}
+        run: ./gradlew --no-daemon clean assembleRelease
+
+      - name: Verify both APK packages and signatures
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_tools_dir="$(find "${ANDROID_HOME}/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          aapt="${build_tools_dir}/aapt"
+          apksigner="${build_tools_dir}/apksigner"
+          expected_cert="$(printf '%s' "${EXPECTED_CERT_SHA256}" | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          verify_apk() {
+            local apk="$1" expected_package="$2"
+            if [[ ! -s "${apk}" ]]; then
+              echo "::error::Expected APK is missing or empty: ${apk}"
+              return 1
+            fi
+            local package_line actual_package report signer_count actual_cert
+            package_line="$("${aapt}" dump badging "${apk}" | grep -m 1 '^package:')"
+            actual_package="$(awk -F"'" '{print $2}' <<< "${package_line}")"
+            if [[ "${actual_package}" != "${expected_package}" ]]; then
+              echo "::error::Unexpected package in ${apk}."
+              return 1
+            fi
+            report="${RUNNER_TEMP}/$(basename "${apk}").apksigner.txt"
+            "${apksigner}" verify --verbose --print-certs "${apk}" > "${report}" 2>&1
+            signer_count="$(grep -ciF 'certificate SHA-256 digest:' "${report}" || true)"
+            actual_cert="$(grep -iF 'certificate SHA-256 digest:' "${report}" | head -n 1 | sed 's/.*digest:[[:space:]]*//' | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+            if [[ "${signer_count}" != '1' || "${actual_cert}" != "${expected_cert}" ]]; then
+              echo "::error::Signer count or certificate pin verification failed for ${apk}."
+              return 1
+            fi
+            echo "Verified package and single pinned signer: ${expected_package}"
+          }
+          verify_apk "app/build/outputs/apk/release/app-release.apk" "${EXPECTED_PACKAGE_NAME}"
+          verify_apk "local/build/outputs/apk/release/local-release.apk" "${EXPECTED_COMPONENT_PACKAGE_NAME}"
+
+      - name: Generate candidate APK checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum app/build/outputs/apk/release/app-release.apk \
+            local/build/outputs/apk/release/local-release.apk \
+            > "${RUNNER_TEMP}/jarvis-h1-candidate-sha256.txt"
+
+      - name: Upload verified signed APK candidates (not a release)
+        uses: actions/upload-artifact@v7
+        with:
+          name: JARVIS-H1-signed-candidate-${{ github.sha }}
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            local/build/outputs/apk/release/local-release.apk
+            ${{ runner.temp }}/jarvis-h1-candidate-sha256.txt
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Remove temporary signing material
+        if: always()
+        shell: bash
+        run: rm -f "${RUNNER_TEMP}/jarvis-release.jks" "${RUNNER_TEMP}/jarvis-keytool.txt" "${RUNNER_TEMP}/"*.apksigner.txt

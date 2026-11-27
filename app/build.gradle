@@ -132,6 +132,10 @@ android {
         // headroom so a passing test cannot fail for memory alone.
         unitTests.all {
             maxHeapSize = "2g"
+            // Robolectric downloads android-all-instrumented outside Gradle's resolver/cache.
+            // Use Google's Maven Central mirror to avoid intermittent Central HTTP 429 failures.
+            systemProperty 'robolectric.dependency.repo.url',
+                    'https://maven-central.storage-download.googleapis.com/maven2'
         }
     }
 

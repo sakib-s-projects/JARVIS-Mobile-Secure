@@ -275,7 +275,8 @@ public final class WeatherService {
     }
 
     private static Location currentLocation(Context c) {
-        if (!hasLocationPermission(c)) return null;
+        if (c == null || (c.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && c.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)) return null;
         LocationManager lm = (LocationManager) c.getSystemService(Context.LOCATION_SERVICE);
         if (lm == null) return null;
         try {

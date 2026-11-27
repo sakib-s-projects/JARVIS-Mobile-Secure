@@ -462,6 +462,11 @@ public final class LocationTriggerEditorActivity extends Activity {
     }
 
     private Location bestLastKnown(LocationManager lm) {
+        // The caller normally checks precise access, but keep this helper safe when reused.
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return null;
+        }
         Location best = null;
         try {
             for (String provider : lm.getProviders(true)) {

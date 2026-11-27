@@ -4,7 +4,7 @@ import android.content.Context;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
+import androidx.appcompat.widget.AppCompatTextView;
 
 /**
  * The status line that sits beside Orbit's orbital thinking indicator.
@@ -26,7 +26,7 @@ import android.widget.TextView;
  * below a legible contrast: a pastel or accent-coloured bubble falls back to full bubble ink
  * instead of fading into its own background.
  */
-public final class ThinkingStatusView extends TextView {
+public final class ThinkingStatusView extends AppCompatTextView {
 
     /** Text size relative to a chat bubble: subordinate to the answer without being small print. */
     private static final float TEXT_SP = 13f;

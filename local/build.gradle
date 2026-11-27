@@ -81,6 +81,12 @@ android {
 
     testOptions {
         unitTests.includeAndroidResources = true
+        // Robolectric's SDK jars are fetched at test runtime, outside Gradle dependency resolution.
+        // Point that fetch at Google's Maven Central mirror to avoid intermittent Central HTTP 429s.
+        unitTests.all {
+            systemProperty 'robolectric.dependency.repo.url',
+                    'https://maven-central.storage-download.googleapis.com/maven2'
+        }
     }
 
     compileOptions {

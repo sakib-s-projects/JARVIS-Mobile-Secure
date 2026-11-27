@@ -2,6 +2,7 @@ package com.orbit.assistant;
 
 import android.app.Activity;
 import android.os.Build;
+import android.annotation.TargetApi;
 
 /**
  * Orbit's single answer to "what does Back do on this screen", for the screens that need one.
@@ -122,6 +123,7 @@ public final class OrbitBackHandler {
     }
 
     /** Everything that touches an API 33+ type, kept where an older runtime never loads it. */
+    @TargetApi(33)
     private static final class Api33 {
         static Object newCallback(Handler handler) {
             return (android.window.OnBackInvokedCallback) handler::onBack;

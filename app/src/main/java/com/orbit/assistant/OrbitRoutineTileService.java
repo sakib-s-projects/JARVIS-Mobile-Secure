@@ -1,5 +1,6 @@
 package com.orbit.assistant;
 
+import android.annotation.SuppressLint;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.os.Build;
@@ -8,6 +9,20 @@ import android.service.quicksettings.TileService;
 
 /** Quick Settings entry point for one user-selected saved Routine. */
 public final class OrbitRoutineTileService extends TileService {
+    @android.annotation.TargetApi(34)
+    private static final class Api34 {
+        static void start(TileService service, PendingIntent pending) {
+            service.startActivityAndCollapse(pending);
+        }
+    }
+
+    // Android 10–13 only: the PendingIntent overload is API 34+. Keep this
+    // deprecated overload isolated to the guarded legacy path for compatibility.
+    @SuppressLint("StartActivityAndCollapseDeprecated")
+    private static void startLegacy(TileService service, Intent intent) {
+        service.startActivityAndCollapse(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    }
+
     @Override public void onStartListening() {
         super.onStartListening();
         Tile tile = getQsTile();
@@ -41,7 +56,7 @@ public final class OrbitRoutineTileService extends TileService {
         }
         Intent intent = new Intent(this, RoutinesActivity.class);
         PendingIntent pending = QuickSettingsTiles.orbitPagePendingIntent(this, 6502, intent);
-        if (Build.VERSION.SDK_INT >= 34) startActivityAndCollapse(pending);
-        else startActivityAndCollapse(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        if (Build.VERSION.SDK_INT >= 34) Api34.start(this, pending);
+        else startLegacy(this, intent);
     }
 }

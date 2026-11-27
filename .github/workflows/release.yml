@@ -1,4 +1,4 @@
-name: Release Orbit APK
+name: Release JARVIS APK
 
 on:
   push:
@@ -21,7 +21,7 @@ concurrency:
 env:
   RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
   EXPECTED_PACKAGE_NAME: com.orbit.assistant
-  EXPECTED_CERT_SHA256: 7D:AD:61:93:85:DF:F1:1E:C7:31:AA:55:5F:2B:44:8A:94:3C:73:91:81:3D:1A:94:DF:1C:B4:23:2E:CD:41:E3
+  EXPECTED_CERT_SHA256: 84:D3:41:4B:60:EA:65:74:E0:A0:E2:72:18:84:F4:D8:F8:9D:39:09:AA:72:64:3F:CE:F0:2C:14:93:A0:68:8F
   EXPECTED_COMPONENT_PACKAGE_NAME: com.orbit.assistant.local
   ORBIT_LOCAL_PROTOCOL: "3"
 
@@ -80,7 +80,7 @@ jobs:
           fi
 
           echo "Release channel: ${release_channel}"
-          echo "Release title: Orbit Assistant v${display_name}"
+          echo "Release title: JARVIS v${display_name}"
           echo "version_name=${source_version_name}" >> "${GITHUB_OUTPUT}"
           echo "version_code=${source_version_code}" >> "${GITHUB_OUTPUT}"
           echo "display_name=${display_name}" >> "${GITHUB_OUTPUT}"
@@ -332,7 +332,7 @@ jobs:
                   continue
               break
 
-          notes = f'## Orbit Assistant v{display}\n\n{summary}\n\n'
+          notes = f'## JARVIS v{display}\n\n{summary}\n\n'
           if bullets:
               notes += "### What's new\n\n"
               notes += ''.join(f'- {bullet}\n' for bullet in bullets)
@@ -390,7 +390,7 @@ jobs:
             --repo "${GITHUB_REPOSITORY}" \
             --verify-tag \
             --draft \
-            --title "Orbit Assistant v${{ steps.source.outputs.display_name }}" \
+            --title "JARVIS v${{ steps.source.outputs.display_name }}" \
             --notes-file "${{ steps.notes.outputs.notes_path }}" \
             "${prerelease_args[@]}"
           for asset in \

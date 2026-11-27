@@ -1,6 +1,6 @@
-# Orbit Assistant Changelog
+# JARVIS Changelog
 
-This is the canonical version-by-version patch history for Orbit Assistant. Each source release should update this file before packaging. The Android `versionName` remains the human-facing four-part Orbit version, while `versionCode` continues as the simple monotonically increasing build number used by Android.
+This is the canonical version-by-version patch history for JARVIS Assistant. Each source release should update this file before packaging. Historical release entries retain their original Orbit-era names for accuracy; Android `versionName` and monotonically increasing `versionCode` remain unchanged for package and update compatibility.
 
 Historical entries through v0.5.11.3 were reconstructed from the original Orbit development conversation. Entries from v0.5.11.4 onward are maintained as part of the source-release workflow.
 

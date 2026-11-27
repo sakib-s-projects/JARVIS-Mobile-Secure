@@ -221,6 +221,41 @@ public final class MemoryLanguageTest {
         assertEquals(0, memoryCount());
     }
 
+    // ---- Bengali identity memory ----
+
+    @Test public void bengaliNameStatementIsSavedAndReadableInANewTurn() {
+        AssistantReply saved = MemoryCommandRouter.tryHandle(context, "আমার নাম সাকিব");
+        assertNotNull(saved);
+        assertTrue(saved.text.contains("সাকিব"));
+        assertEquals(1, memoryCount());
+
+        AssistantReply recalled = MemoryCommandRouter.tryHandle(context, "আমার নাম কী?");
+        assertNotNull(recalled);
+        assertTrue(recalled.text.contains("সাকিব"));
+    }
+
+    @Test public void bengaliRememberNameUsesThePreviousUserTurn() {
+        List<AssistantClient.History> history = new java.util.ArrayList<>();
+        history.add(new AssistantClient.History("user", "আমার নাম সাকিব"));
+
+        AssistantReply saved = MemoryCommandRouter.tryHandle(
+                context, "আমার নাম মনে রাখো", history);
+        assertNotNull(saved);
+        assertEquals(1, memoryCount());
+
+        AssistantReply recalled = MemoryCommandRouter.tryHandle(context, "আমার নাম কী");
+        assertNotNull(recalled);
+        assertTrue(recalled.text.contains("সাকিব"));
+    }
+
+    @Test public void updatingBengaliNameDoesNotCreateDuplicateIdentityFacts() {
+        MemoryCommandRouter.tryHandle(context, "আমার নাম সাকিব");
+        MemoryCommandRouter.tryHandle(context, "আমার নাম সাকিব আহমেদ");
+        assertEquals(1, memoryCount());
+        AssistantReply recalled = MemoryCommandRouter.tryHandle(context, "আমার নাম কী");
+        assertTrue(recalled.text.contains("সাকিব আহমেদ"));
+    }
+
     // ---- boundaries ----
 
     @Test public void ordinaryConversationIsNotAMemoryCommand() {

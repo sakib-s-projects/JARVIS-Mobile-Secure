@@ -53,11 +53,11 @@ public final class DistributionBoundaryTest {
     }
 
     @Test public void theGitHubEditionKeepsItsUpdaterEndpoints() {
-        assertEquals("https://api.github.com/repos/lpnovi/Orbit-Assistant/releases/latest",
+        assertEquals("https://api.github.com/repos/sakib-s-projects/JARVIS-Mobile-Secure/releases/latest",
                 OrbitEdition.latestReleaseApi());
-        assertEquals("https://api.github.com/repos/lpnovi/Orbit-Assistant/releases?per_page=15",
+        assertEquals("https://api.github.com/repos/sakib-s-projects/JARVIS-Mobile-Secure/releases?per_page=15",
                 OrbitEdition.releasesListApi(15));
-        assertEquals("https://github.com/lpnovi/Orbit-Assistant/releases/download/",
+        assertEquals("https://github.com/sakib-s-projects/JARVIS-Mobile-Secure/releases/download/",
                 OrbitEdition.releaseDownloadBase());
         assertEquals("application/vnd.android.package-archive",
                 OrbitEdition.apkInstallerIntent(android.net.Uri.parse("content://x/y")).getType());
