@@ -1236,6 +1236,7 @@ public class SettingsActivity extends Activity implements UiKit.AppearanceListen
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton("Continue", (d, w) -> proceed.run());
         AlertDialog dialog = builder.create();
+        styleOrbitDialog(dialog, false);
         dialog.show();
     }
 
