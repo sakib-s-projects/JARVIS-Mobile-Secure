@@ -110,6 +110,47 @@ public final class MemoryCommandRouter {
         String lower = canonical(prompt);
         if (raw.isEmpty()) return null;
 
+        // Bengali identity facts are explicit, durable user-provided information.
+        if (isBengaliNameQuestion(lower)) {
+            for (MemoryStore.Memory saved : MemoryStore.list(c)) {
+                if (saved.enabled && saved.text.startsWith("ব্যবহারকারীর নাম:")) {
+                    String name = saved.text.substring("ব্যবহারকারীর নাম:".length()).trim();
+                    return new AssistantReply(name.isEmpty()
+                            ? "তোমার নাম এখনো Memory-তে সংরক্ষিত নেই।"
+                            : "তোমার নাম " + name + "।");
+                }
+            }
+            return new AssistantReply("তোমার নাম এখনো Memory-তে সংরক্ষিত নেই। বলো: আমার নাম [তোমার নাম]।");
+        }
+
+        String bengaliName = extractBengaliName(raw);
+        if (!bengaliName.isEmpty()) {
+            MemoryStore.Memory existingName = findBengaliName(c);
+            String value = "ব্যবহারকারীর নাম: " + bengaliName;
+            if (existingName != null) {
+                MemoryStore.update(c, existingName.id, MemoryStore.CATEGORY_OTHER, value,
+                        existingName.pinned, existingName.enabled);
+            } else {
+                MemoryStore.add(c, MemoryStore.CATEGORY_OTHER, value);
+            }
+            return new AssistantReply("মনে রাখলাম, " + bengaliName + "।");
+        }
+
+        if (isBengaliRememberName(lower)) {
+            MemoryStore.Suggestion prior = recentSuggestion(c, history, raw);
+            if (prior == null || !prior.text.startsWith("ব্যবহারকারীর নাম:")) {
+                return new AssistantReply("কোন নামটি মনে রাখব? বলো: আমার নাম [তোমার নাম]।");
+            }
+            MemoryStore.Memory existingName = findBengaliName(c);
+            if (existingName != null) {
+                MemoryStore.update(c, existingName.id, MemoryStore.CATEGORY_OTHER, prior.text,
+                        existingName.pinned, existingName.enabled);
+            } else {
+                MemoryStore.add(c, MemoryStore.CATEGORY_OTHER, prior.text);
+            }
+            return new AssistantReply("নামটি Memory-তে সংরক্ষণ করেছি।");
+        }
+
         if (equalsAny(lower, LIST_ALL)) {
             return listMemories(c, MemoryStore.list(c), "Here is what Orbit remembers locally:");
         }
@@ -208,6 +249,38 @@ public final class MemoryCommandRouter {
         return null;
     }
 
+    private static boolean isBengaliNameQuestion(String lower) {
+        return lower.matches("^আমার নাম (কী|কি|বল|বলো|জানো|কী\\s*\\?)$") ||
+                lower.equals("আমার নাম কী") || lower.equals("আমার নাম কি") ||
+                lower.equals("আমার নাম বলো") || lower.equals("আমার নাম কী বলো");
+    }
+
+    private static boolean isBengaliRememberName(String lower) {
+        return lower.equals("আমার নাম মনে রাখো") ||
+                lower.equals("আমার নামটা মনে রাখো") ||
+                lower.equals("নামটা মনে রাখো");
+    }
+
+    private static String extractBengaliName(String raw) {
+        if (raw == null) return "";
+        String value = raw.trim().replaceAll("[.!?。！？]+$", "").trim();
+        String prefix = "আমার নাম ";
+        if (!value.startsWith(prefix)) return "";
+        String name = value.substring(prefix.length()).trim();
+        String lower = name.toLowerCase(Locale.ROOT);
+        if (name.isEmpty() || name.length() > 60 ||
+                lower.matches("^(কী|কি|বল|বলো|জানো|মনে রাখো|মনে রাখবে|কী মনে রাখো)$")) return "";
+        if (name.contains("মনে রাখো") || name.contains("কী?") || name.contains("কি?")) return "";
+        return name;
+    }
+
+    private static MemoryStore.Memory findBengaliName(Context c) {
+        for (MemoryStore.Memory memory : MemoryStore.list(c)) {
+            if (memory.text.startsWith("ব্যবহারকারীর নাম:")) return memory;
+        }
+        return null;
+    }
+
     private static MemoryStore.Suggestion recentSuggestion(
             Context c, List<AssistantClient.History> history, String currentPrompt) {
         if (history == null || history.isEmpty()) return null;
@@ -238,6 +311,12 @@ public final class MemoryCommandRouter {
             if (h == null || !"user".equalsIgnoreCase(h.role)) continue;
             String content = h.content == null ? "" : h.content.trim();
             if (content.isEmpty() || content.equalsIgnoreCase(current)) continue;
+
+            String priorName = extractBengaliName(content);
+            if (!priorName.isEmpty()) {
+                return new MemoryStore.Suggestion("ব্যবহারকারীর নাম: " + priorName,
+                        MemoryStore.CATEGORY_OTHER);
+            }
 
             MemoryStore.Suggestion suggestion = MemoryStore.suggest(c, content);
             if (suggestion != null) return suggestion;
