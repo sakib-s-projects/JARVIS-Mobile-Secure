@@ -46,7 +46,6 @@ public final class AskOrbitTileService extends TileService {
                 ? QuickSettingsTiles.activityPendingIntent(this, intent, 6501)
                 : QuickSettingsTiles.orbitPagePendingIntent(this, 6501,
                         new Intent(this, SettingsActivity.class), intent);
-        if (Build.VERSION.SDK_INT >= 34) startActivityAndCollapse(pending);
-        else startActivityAndCollapse(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        startActivityAndCollapse(pending);
     }
 }
