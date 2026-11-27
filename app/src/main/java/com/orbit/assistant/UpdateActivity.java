@@ -225,7 +225,7 @@ public final class UpdateActivity extends Activity {
 
         TextView privacy = UiKit.text(this, OrbitDistribution.isPlay()
                 ? "This copy of Orbit was installed from Google Play, which delivers and verifies its updates. Orbit itself never downloads or installs app updates."
-                : "Orbit checks only the public lpnovi/Orbit-Assistant releases — stable releases, plus official Beta prereleases when you have joined the Beta channel. It sends no account credentials, never downloads without your approval, verifies the APK checksum, package, version and permanent signing certificate, then uses Android's normal installer. Every build is verified the same way, whichever channel it came from.",
+                : "Orbit checks only the public sakib-s-projects/JARVIS-Mobile-Secure releases — stable releases, plus official Beta prereleases when you have joined the Beta channel. It sends no account credentials, never downloads without your approval, verifies the APK checksum, package, version and permanent signing certificate, then uses Android's normal installer. Every build is verified the same way, whichever channel it came from.",
                 12, UiKit.MUTED, false);
         privacy.setLineSpacing(0, 1.12f);
         LinearLayout.LayoutParams privacyLp = new LinearLayout.LayoutParams(
@@ -252,7 +252,7 @@ public final class UpdateActivity extends Activity {
     /** Everything on the Links card, in order. A new link is one more entry here. */
     static final AboutLink[] LINKS = {
             new AboutLink("GitHub", "Source code, releases and issues",
-                    "https://github.com/lpnovi/Orbit-Assistant"),
+                    "https://github.com/sakib-s-projects/JARVIS-Mobile-Secure"),
     };
 
     private TextView linksSection() {
