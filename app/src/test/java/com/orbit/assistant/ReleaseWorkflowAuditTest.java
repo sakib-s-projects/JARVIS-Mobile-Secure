@@ -167,8 +167,8 @@ public final class ReleaseWorkflowAuditTest {
                 "the permanent certificate is verified");
         contains(yaml, "EXPECTED_PACKAGE_NAME: com.orbit.assistant",
                 "the package name is pinned in the workflow");
-        contains(yaml, "EXPECTED_CERT_SHA256: 7D:AD:61:93:85:DF:F1:1E:C7:31:AA:55:5F:2B:44:8A:"
-                        + "94:3C:73:91:81:3D:1A:94:DF:1C:B4:23:2E:CD:41:E3",
+        contains(yaml, "EXPECTED_CERT_SHA256: 84:D3:41:4B:60:EA:65:74:E0:A0:E2:72:18:84:F4:D8:"
+                        + "F8:9D:39:09:AA:72:64:3F:CE:F0:2C:14:93:A0:68:8F",
                 "the permanent Orbit certificate is pinned in the workflow");
         contains(yaml, "sha256sum", "the APK checksum file is generated");
         contains(yaml, "\"schema\": 1", "the manifest schema stays 1 for older Orbit installs");
