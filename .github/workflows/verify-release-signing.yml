@@ -141,6 +141,25 @@ jobs:
           verify_apk "app/build/outputs/apk/release/app-release.apk" "${EXPECTED_PACKAGE_NAME}"
           verify_apk "local/build/outputs/apk/release/local-release.apk" "${EXPECTED_COMPONENT_PACKAGE_NAME}"
 
+      - name: Generate candidate APK checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum app/build/outputs/apk/release/app-release.apk \
+            local/build/outputs/apk/release/local-release.apk \
+            > "${RUNNER_TEMP}/jarvis-h1-candidate-sha256.txt"
+
+      - name: Upload verified signed APK candidates (not a release)
+        uses: actions/upload-artifact@v7
+        with:
+          name: JARVIS-H1-signed-candidate-${{ github.sha }}
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            local/build/outputs/apk/release/local-release.apk
+            ${{ runner.temp }}/jarvis-h1-candidate-sha256.txt
+          if-no-files-found: error
+          retention-days: 3
+
       - name: Remove temporary signing material
         if: always()
         shell: bash
