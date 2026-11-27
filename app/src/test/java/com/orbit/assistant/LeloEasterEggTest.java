@@ -345,7 +345,7 @@ public final class LeloEasterEggTest {
         String strings = ComponentUninstallTest.readRepositoryFile(
                 "app/src/main/res/values/strings.xml");
         assertTrue("the app name is still Orbit's",
-                strings.contains("<string name=\"app_name\">Orbit Assistant</string>"));
+                strings.contains("<string name=\"app_name\">JARVIS</string>"));
         assertFalse("and nothing in resources knows about Lelo",
                 strings.contains("Lelo"));
     }
