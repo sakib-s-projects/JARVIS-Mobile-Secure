@@ -39,7 +39,7 @@ import java.util.regex.Pattern;
 public final class OrbitUpdater {
     private static final String TAG = "OrbitUpdater";
     /** GitHub's API, download origin, and documented release-asset CDN redirect hosts only. */
-    private static final int MAX_REDIRECTS = 5;
+    static final int MAX_REDIRECTS = 5;
     private static final String[] ALLOWED_UPDATE_HOSTS = {
             "api.github.com",
             "github.com",
