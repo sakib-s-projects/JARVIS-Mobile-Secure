@@ -1,4 +1,4 @@
-name: Release Orbit APK
+name: Release JARVIS APK
 
 on:
   push:
@@ -80,7 +80,7 @@ jobs:
           fi
 
           echo "Release channel: ${release_channel}"
-          echo "Release title: Orbit Assistant v${display_name}"
+          echo "Release title: JARVIS v${display_name}"
           echo "version_name=${source_version_name}" >> "${GITHUB_OUTPUT}"
           echo "version_code=${source_version_code}" >> "${GITHUB_OUTPUT}"
           echo "display_name=${display_name}" >> "${GITHUB_OUTPUT}"
@@ -332,7 +332,7 @@ jobs:
                   continue
               break
 
-          notes = f'## Orbit Assistant v{display}\n\n{summary}\n\n'
+          notes = f'## JARVIS v{display}\n\n{summary}\n\n'
           if bullets:
               notes += "### What's new\n\n"
               notes += ''.join(f'- {bullet}\n' for bullet in bullets)
@@ -390,7 +390,7 @@ jobs:
             --repo "${GITHUB_REPOSITORY}" \
             --verify-tag \
             --draft \
-            --title "Orbit Assistant v${{ steps.source.outputs.display_name }}" \
+            --title "JARVIS v${{ steps.source.outputs.display_name }}" \
             --notes-file "${{ steps.notes.outputs.notes_path }}" \
             "${prerelease_args[@]}"
           for asset in \
