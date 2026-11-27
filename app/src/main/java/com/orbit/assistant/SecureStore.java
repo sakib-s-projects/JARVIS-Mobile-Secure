@@ -36,6 +36,9 @@ public final class SecureStore {
     private static final String XAI_ALIAS = "orbit_xai_key_v1";
     private static final String XAI_ENC = "xai_key_enc";
     private static final String XAI_IV = "xai_key_iv";
+    private static final String GEMINI_ALIAS = "jarvis_gemini_key_v1";
+    private static final String GEMINI_ENC = "gemini_key_enc";
+    private static final String GEMINI_IV = "gemini_key_iv";
 
     private SecureStore() {}
 
@@ -166,6 +169,18 @@ public final class SecureStore {
     public static void clearXaiKey(Context c) {
         Prefs.get(c).edit().remove(XAI_ENC).remove(XAI_IV).apply();
         AutoPermissions.revokeOnCredentialRemoval(c, Prefs.PROVIDER_XAI);
+    }
+
+    public static boolean saveGeminiKey(Context c, String value) {
+        return saveApiKey(c, GEMINI_ALIAS, GEMINI_ENC, GEMINI_IV, value);
+    }
+    public static String loadGeminiKey(Context c) {
+        return loadApiKey(c, GEMINI_ALIAS, GEMINI_ENC, GEMINI_IV);
+    }
+    public static boolean hasGeminiKey(Context c) { return !loadGeminiKey(c).isEmpty(); }
+    public static void clearGeminiKey(Context c) {
+        Prefs.get(c).edit().remove(GEMINI_ENC).remove(GEMINI_IV).apply();
+        AutoPermissions.revokeOnCredentialRemoval(c, Prefs.PROVIDER_GEMINI);
     }
 
     private static boolean saveApiKey(Context c, String alias, String enc, String iv, String value) {
