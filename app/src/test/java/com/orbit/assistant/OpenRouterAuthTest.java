@@ -305,7 +305,13 @@ public final class OpenRouterAuthTest {
         OpenRouterAuth.start(context, recorder, 300L);
         OpenRouterAuth.Attempt attempt = OpenRouterAuth.activeForTest();
         long until = System.currentTimeMillis() + 5000L;
-        while (!attempt.server.isClosed() && System.currentTimeMillis() < until) Thread.sleep(50);
+        while ((!attempt.server.isClosed() || recorder.failed.get() == 0)
+                && System.currentTimeMillis() < until) {
+            // The receiver runs on a worker thread and posts its outcome to the main looper.
+            // Socket closure can become visible just before that post, so wait for both signals.
+            ShadowLooper.idleMainLooper();
+            Thread.sleep(10);
+        }
         ShadowLooper.idleMainLooper();
         assertTrue(attempt.server.isClosed());
         assertEquals(1, recorder.failed.get());
