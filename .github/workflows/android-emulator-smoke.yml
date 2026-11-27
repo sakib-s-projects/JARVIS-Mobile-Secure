@@ -1,9 +1,8 @@
-name: JARVIS Android 10 Emulator Smoke Tests
+name: JARVIS Continuous Quality Gate
 
 on:
   workflow_dispatch:
   pull_request:
-    branches: [ main ]
   push:
     branches: [ main, h1-main-port ]
 
@@ -11,14 +10,65 @@ permissions:
   contents: read
 
 concurrency:
-  group: android-emulator-${{ github.ref }}
+  group: jarvis-quality-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  android-10-emulator:
-    name: Android 10 (API 29) instrumented tests
+  unit-lint-build:
+    name: "${{ matrix.module }} — unit tests, lint and debug build"
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [app, local]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Run unit tests
+        run: ./gradlew --no-daemon :${{ matrix.module }}:testDebugUnitTest
+
+      - name: Run Android lint
+        run: ./gradlew --no-daemon :${{ matrix.module }}:lintDebug
+
+      - name: Compile debug variant
+        run: ./gradlew --no-daemon :${{ matrix.module }}:assembleDebug
+
+      - name: Upload unit test and lint reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: jarvis-${{ matrix.module }}-quality-reports
+          path: |
+            ${{ matrix.module }}/build/reports/tests/
+            ${{ matrix.module }}/build/test-results/
+            ${{ matrix.module }}/build/reports/lint-results-*.html
+            ${{ matrix.module }}/build/reports/lint-results-*.xml
+          if-no-files-found: ignore
+
+  android-10-emulator:
+    name: Android 10 (API 29) end-to-end instrumented tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: unit-lint-build
     steps:
       - name: Check out source
         uses: actions/checkout@v7
@@ -49,11 +99,11 @@ jobs:
           disable-animations: true
           script: ./gradlew --no-daemon :app:connectedDebugAndroidTest
 
-      - name: Upload Android test reports
+      - name: Upload Android emulator reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: jarvis-android-10-emulator-test-reports
+          name: jarvis-android-10-emulator-reports
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
