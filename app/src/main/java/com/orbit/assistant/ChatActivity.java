@@ -3123,7 +3123,7 @@ public class ChatActivity extends Activity {
         int flags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION |
                 Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
         for (Uri uri : uris) {
-            try { getContentResolver().takePersistableUriPermission(uri, flags); }
+            try { getContentResolver().takePersistableUriPermission(uri, data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION)); }
             catch (Exception ignored) {}
         }
         loadUriAttachments(uris, "");
