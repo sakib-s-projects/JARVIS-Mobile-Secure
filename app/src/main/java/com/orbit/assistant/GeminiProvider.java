@@ -58,7 +58,8 @@ final class GeminiProvider implements AiProvider {
                 try {
                     String answer = generate(key, model, systemPrompt(request), conversationPrompt(request));
                     if (!answer.trim().isEmpty()) {
-                        ResponseDetails details = ResponseDetails.sentWith(request.selection);
+                        ResponseDetails details = ResponseDetails.sentWith(
+                                AiSelection.of(Prefs.PROVIDER_GEMINI, model, null));
                         callback.onSuccess(new AssistantReply(answer.replace("—", "-"),
                                 new ArrayList<>()).withDetails(details));
                         return;
@@ -104,7 +105,7 @@ final class GeminiProvider implements AiProvider {
     }
 
     private static String systemPrompt(AiRequest request) {
-        StringBuilder s = new StringBuilder(ProviderRequestMapper.SYSTEM);
+        StringBuilder s = new StringBuilder(ProviderRequestMapper.SYSTEM.replace("You are Orbit", "You are JARVIS"));
         if (request.memoryContext != null && !request.memoryContext.trim().isEmpty())
             s.append("\n\n").append(request.memoryContext.trim());
         if (request.trustedTaskContext != null && !request.trustedTaskContext.trim().isEmpty())
