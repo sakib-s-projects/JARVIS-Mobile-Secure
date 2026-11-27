@@ -10,6 +10,7 @@ import android.graphics.Color;
 import android.graphics.Outline;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
+import android.annotation.TargetApi;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
@@ -459,13 +460,18 @@ public final class OrbitPredictiveBack {
      * itself a background is given Orbit's for the duration, because a see-through page over a
      * see-through window would show the screen below through the page rather than beside it.
      */
+    @TargetApi(30)
     private void beginReveal() {
         if (revealing) return;
         moving = resolvePage();
         if (moving == null) return;
         revealing = true;
-        try { revealedRealPage = activity.setTranslucent(true); }
-        catch (Throwable t) { revealedRealPage = false; }
+        if (Build.VERSION.SDK_INT >= 30) {
+            try { revealedRealPage = activity.setTranslucent(true); }
+            catch (Throwable t) { revealedRealPage = false; }
+        } else {
+            revealedRealPage = false;
+        }
         if (revealedRealPage) {
             try { activity.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT)); }
             catch (Exception ignored) {}
@@ -485,6 +491,7 @@ public final class OrbitPredictiveBack {
     }
 
     /** Puts everything back exactly as it was, so a cancelled gesture leaves no trace. */
+    @TargetApi(30)
     private void endReveal() {
         cancelSettle();
         corner = 0f;
@@ -504,7 +511,7 @@ public final class OrbitPredictiveBack {
         revealing = false;
         try { activity.getWindow().setBackgroundDrawable(new ColorDrawable(UiKit.BG)); }
         catch (Exception ignored) {}
-        if (revealedRealPage) {
+        if (revealedRealPage && Build.VERSION.SDK_INT >= 30) {
             try { activity.setTranslucent(false); }
             catch (Throwable ignored) {}
         }
@@ -518,8 +525,10 @@ public final class OrbitPredictiveBack {
         // The gesture already carried the page out. A window close animation on top of that is the
         // "disconnected second animation" this feature exists to avoid.
         if (revealing) {
-            try { Api34.clearCloseTransition(activity); }
-            catch (Exception ignored) {}
+            if (Build.VERSION.SDK_INT >= 34) {
+                try { Api34.clearCloseTransition(activity); }
+                catch (Exception ignored) {}
+            }
         }
         try { screen.navigateBack(); }
         catch (Exception ignored) {}
@@ -544,11 +553,12 @@ public final class OrbitPredictiveBack {
      */
     static Boolean keyboardVisibleForTest;
 
+    @TargetApi(30)
     private boolean keyboardVisible() {
         if (keyboardVisibleForTest != null) return keyboardVisibleForTest;
         try {
             WindowInsets insets = activity.getWindow().getDecorView().getRootWindowInsets();
-            if (insets != null) return insets.isVisible(WindowInsets.Type.ime());
+            if (Build.VERSION.SDK_INT >= 30 && insets != null) return insets.isVisible(WindowInsets.Type.ime());
         } catch (Exception ignored) {}
         return false;
     }
@@ -592,6 +602,7 @@ public final class OrbitPredictiveBack {
     void invokedForTest() { invoked(); }
 
     /** The plain back callback, for every opted-in screen that is not drawing the gesture. */
+    @TargetApi(33)
     private static final class Api33 {
         static Object newCallback(Runnable onBack) {
             return (android.window.OnBackInvokedCallback) onBack::run;
@@ -610,6 +621,7 @@ public final class OrbitPredictiveBack {
     }
 
     /** Everything that touches an API 34+ type, kept where an older runtime never loads it. */
+    @TargetApi(34)
     private static final class Api34 {
         static Object newCallback(Progress progress) {
             return new android.window.OnBackAnimationCallback() {
