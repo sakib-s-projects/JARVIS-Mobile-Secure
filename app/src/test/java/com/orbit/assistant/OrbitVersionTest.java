@@ -74,8 +74,8 @@ public final class OrbitVersionTest {
     }
 
     @Test public void releaseTitlesMatchTheWorkflow() {
-        assertEquals("Orbit Assistant v0.7.7.4", OrbitVersion.releaseTitle("0.7.7.4"));
-        assertEquals("Orbit Assistant v0.7.7.5 Beta 1", OrbitVersion.releaseTitle("0.7.7.5-beta.1"));
+        assertEquals("JARVIS v0.7.7.4", OrbitVersion.releaseTitle("0.7.7.4"));
+        assertEquals("JARVIS v0.7.7.5 Beta 1", OrbitVersion.releaseTitle("0.7.7.5-beta.1"));
     }
 
     // ---- tags -------------------------------------------------------------------------------------
@@ -160,7 +160,7 @@ public final class OrbitVersionTest {
         assertEquals("0.8.5.0", OrbitVersion.baseVersion(version));
         assertEquals("a Stable release has no beta counter", 0, OrbitVersion.betaNumber(version));
 
-        assertEquals("Orbit Assistant v0.8.5.0", OrbitVersion.releaseTitle(version));
+        assertEquals("JARVIS v0.8.5.0", OrbitVersion.releaseTitle(version));
         assertEquals("v0.8.5.0", OrbitVersion.tagFor(version));
         assertTrue("the release workflow must publish it as a normal release",
                 OrbitVersion.isStableTag(OrbitVersion.tagFor(version)));
