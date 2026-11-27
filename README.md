@@ -16,7 +16,7 @@ Bangla-first personal assistant project with a modular Android app, optional loc
 
 This repository is the JARVIS project source. The Android application display name is **JARVIS Assistant**. The project is being migrated from an upstream Orbit Assistant codebase, so some internal identifiers and compatibility strings still contain the former name.
 
-The migration is intentionally staged. User-facing identity is being changed to JARVIS while Android package IDs, signing identity, persistent storage keys, backup formats, IPC contracts, and updater verification remain compatible until their dedicated migration tests are complete.
+The migration is intentionally staged. User-facing identity is being changed to JARVIS. Android package IDs, persistent storage keys, backup formats, IPC contracts, and updater manifest/asset formats remain compatible where required. **The Android signing identity has changed** because the historical private key could not be recovered; APKs signed with the new JARVIS certificate cannot update installations signed with the historical certificate. See the release and updater status below before changing installations.
 
 ## Project priorities
 
