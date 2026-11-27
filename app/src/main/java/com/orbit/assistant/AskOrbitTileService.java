@@ -10,6 +10,13 @@ import android.service.voice.VoiceInteractionService;
 
 /** Quick Settings entry point for Orbit's existing assistant session. */
 public final class AskOrbitTileService extends TileService {
+    @android.annotation.TargetApi(34)
+    private static final class Api34 {
+        static void start(TileService service, PendingIntent pending) {
+            service.startActivityAndCollapse(pending);
+        }
+    }
+
     @Override public void onStartListening() {
         super.onStartListening();
         Tile tile = getQsTile();
@@ -46,6 +53,7 @@ public final class AskOrbitTileService extends TileService {
                 ? QuickSettingsTiles.activityPendingIntent(this, intent, 6501)
                 : QuickSettingsTiles.orbitPagePendingIntent(this, 6501,
                         new Intent(this, SettingsActivity.class), intent);
-        startActivityAndCollapse(pending);
+        if (Build.VERSION.SDK_INT >= 34) Api34.start(this, pending);
+        else startActivityAndCollapse(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 }
