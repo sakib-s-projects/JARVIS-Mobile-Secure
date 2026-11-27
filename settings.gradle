@@ -9,6 +9,15 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
+        // Robolectric publishes runtime support artifacts to Maven Central. Prefer Google's
+        // read-only Maven Central mirror to reduce CI failures during Maven Central rate limits.
+        // Keep Maven Central as fallback for artifacts not yet present on the mirror.
+        maven {
+            url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
+            content {
+                includeGroup("org.robolectric")
+            }
+        }
         mavenCentral()
     }
 }
