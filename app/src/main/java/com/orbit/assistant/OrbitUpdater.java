@@ -38,6 +38,14 @@ import java.util.regex.Pattern;
  */
 public final class OrbitUpdater {
     private static final String TAG = "OrbitUpdater";
+    /** GitHub's API, download origin, and documented release-asset CDN redirect hosts only. */
+    private static final int MAX_REDIRECTS = 5;
+    private static final String[] ALLOWED_UPDATE_HOSTS = {
+            "api.github.com",
+            "github.com",
+            "release-assets.githubusercontent.com",
+            "objects.githubusercontent.com"
+    };
     /**
      * How many recent releases the Beta channel looks at.
      *
@@ -747,22 +755,68 @@ public final class OrbitUpdater {
     }
 
     private static HttpURLConnection open(String value, String accept) throws Exception {
-        URL url = new URL(value);
-        if (!"https".equalsIgnoreCase(url.getProtocol())) {
-            throw new UpdateException("Orbit updates require HTTPS.");
+        URL current = new URL(value);
+        for (int redirects = 0; ; redirects++) {
+            if (!isAllowedRedirectUrl(current.toString())) {
+                throw new UpdateException("The update service URL is not on the trusted GitHub host allowlist.");
+            }
+            HttpURLConnection connection = (HttpURLConnection) current.openConnection();
+            connection.setInstanceFollowRedirects(false);
+            connection.setConnectTimeout(15000);
+            connection.setReadTimeout(45000);
+            connection.setRequestProperty("Accept", accept);
+            connection.setRequestProperty("User-Agent", "JARVIS/" + BuildConfig.VERSION_NAME + " (Android updater)");
+
+            int status = connection.getResponseCode();
+            if (!isRedirectStatus(status)) return connection;
+
+            String location = connection.getHeaderField("Location");
+            connection.disconnect();
+            if (redirects >= MAX_REDIRECTS) {
+                throw new UpdateException("The update service exceeded the allowed redirect limit.");
+            }
+            if (location == null || location.trim().isEmpty()) {
+                throw new UpdateException("The update service returned an invalid redirect.");
+            }
+            URL next = new URL(current, location.trim());
+            if (!isAllowedRedirectUrl(next.toString())) {
+                throw new UpdateException("The update service redirected outside the trusted GitHub host allowlist.");
+            }
+            current = next;
         }
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setConnectTimeout(15000);
-        connection.setReadTimeout(45000);
-        connection.setRequestProperty("Accept", accept);
-        connection.setRequestProperty("User-Agent", "OrbitAssistant/" + BuildConfig.VERSION_NAME + " (Android updater)");
-        return connection;
+    }
+
+    /** Package-visible for deterministic policy tests; no network request is made. */
+    static boolean isAllowedRedirectUrl(String value) {
+        try {
+            URL url = new URL(value);
+            if (!"https".equalsIgnoreCase(url.getProtocol()) ||
+                    url.getUserInfo() != null ||
+                    (url.getPort() != -1 && url.getPort() != 443)) {
+                return false;
+            }
+            String host = url.getHost();
+            if (host == null || host.isEmpty()) return false;
+            for (String allowed : ALLOWED_UPDATE_HOSTS) {
+                if (allowed.equalsIgnoreCase(host)) return true;
+            }
+            return false;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private static boolean isRedirectStatus(int status) {
+        return status == HttpURLConnection.HTTP_MOVED_PERM ||
+                status == HttpURLConnection.HTTP_MOVED_TEMP ||
+                status == HttpURLConnection.HTTP_SEE_OTHER ||
+                status == 307 || status == 308;
     }
 
     private static void requireHttpsFinalUrl(HttpURLConnection connection) throws Exception {
         if (connection == null || connection.getURL() == null ||
-                !"https".equalsIgnoreCase(connection.getURL().getProtocol())) {
-            throw new UpdateException("The update service redirected to an insecure URL.");
+                !isAllowedRedirectUrl(connection.getURL().toString())) {
+            throw new UpdateException("The update service ended outside the trusted GitHub host allowlist.");
         }
     }
 
