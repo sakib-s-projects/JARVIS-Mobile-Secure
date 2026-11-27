@@ -3120,11 +3120,17 @@ public class ChatActivity extends Activity {
         // four attachments, not five, and not one.
         List<Uri> uris = AttachmentUriCollector.fromPickerResult(data);
         if (uris.isEmpty()) return;
-        int flags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION |
-                Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-        for (Uri uri : uris) {
-            try { getContentResolver().takePersistableUriPermission(uri, data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION)); }
-            catch (Exception ignored) {}
+        int resultFlags = data.getFlags();
+        boolean canPersistRead = (resultFlags & Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0;
+        boolean canPersistWrite = (resultFlags & Intent.FLAG_GRANT_WRITE_URI_PERMISSION) != 0;
+        int persistFlags = 0;
+        if (canPersistRead) persistFlags |= Intent.FLAG_GRANT_READ_URI_PERMISSION;
+        if (canPersistWrite) persistFlags |= Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
+        if (persistFlags != 0) {
+            for (Uri uri : uris) {
+                try { getContentResolver().takePersistableUriPermission(uri, persistFlags); }
+                catch (SecurityException ignored) {}
+            }
         }
         loadUriAttachments(uris, "");
     }
