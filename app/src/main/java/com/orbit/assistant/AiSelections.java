@@ -161,8 +161,8 @@ public final class AiSelections {
         ProviderCatalogRepository.loadCached(c);
         ensureMigrated(c);
         SharedPreferences p = Prefs.get(c);
-        AiSelection stored = resolve(AiSelection.of(p.getString(Prefs.PROVIDER, Prefs.PROVIDER_CHATGPT),
-                p.getString(Prefs.AI_DEFAULT_MODEL, OrbitModelCatalog.LUNA),
+        AiSelection stored = resolve(AiSelection.of(p.getString(Prefs.PROVIDER, Prefs.PROVIDER_GEMINI),
+                p.getString(Prefs.AI_DEFAULT_MODEL, OrbitModelCatalog.GEMINI_38_FLASH),
                 AiStrength.fromId(p.getString(Prefs.AI_DEFAULT_STRENGTH, ""))));
         // A default provider that can no longer answer (Orbit Local after its model was removed)
         // starts new chats on ChatGPT instead, the same rule AiProviders.active() follows, so
@@ -289,7 +289,7 @@ public final class AiSelections {
     private static void migrate(Context c) {
         SharedPreferences p = Prefs.get(c);
         if (!p.contains(Prefs.AI_DEFAULT_MODEL)) {
-            writeGlobalNow(c, fromLegacy(p.getString(Prefs.PROVIDER, Prefs.PROVIDER_CHATGPT),
+            writeGlobalNow(c, fromLegacy(p.getString(Prefs.PROVIDER, Prefs.PROVIDER_GEMINI),
                     p.getString(Prefs.INTELLIGENCE_MODE, ""),
                     p.getString(Prefs.MODEL, ""), p.getString(Prefs.REASONING, "")));
         }
