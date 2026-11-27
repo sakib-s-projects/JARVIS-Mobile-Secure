@@ -608,7 +608,7 @@ public final class UpdateActivity extends Activity {
 
     private void showAvailableState(OrbitUpdater.Release release, boolean showDialog) {
         hideDownloadProgress();
-        status.setText("Update available: Orbit Assistant v" + release.displayName());
+        status.setText("Update available: JARVIS v" + release.displayName());
         status.setTextColor(UiKit.accent(this));
         setAction("View update", () -> showUpdateDialog(release), true);
         if (showDialog) showUpdateDialog(release);
@@ -627,7 +627,7 @@ public final class UpdateActivity extends Activity {
         titleRow.setOrientation(LinearLayout.HORIZONTAL);
         titleRow.setGravity(Gravity.CENTER_VERTICAL);
         TextView title = UiKit.text(this,
-                "Orbit Assistant v" + release.displayName(), 20, UiKit.TEXT, true);
+                "JARVIS v" + release.displayName(), 20, UiKit.TEXT, true);
         title.setAccessibilityHeading(true);
         titleRow.addView(title, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
