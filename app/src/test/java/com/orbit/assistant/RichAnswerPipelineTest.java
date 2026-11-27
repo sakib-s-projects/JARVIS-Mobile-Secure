@@ -51,6 +51,9 @@ public final class RichAnswerPipelineTest {
 
     @Before public void setUp() {
         context = RuntimeEnvironment.getApplication();
+        Prefs.get(context).edit().clear().commit();
+        AiSelections.setGlobalDefault(context, AiSelections.FALLBACK);
+        ConversationStore.clear(context);
         clearCache();
         RichAnswerTrace.clear(context);
         images = new FakeImages();
