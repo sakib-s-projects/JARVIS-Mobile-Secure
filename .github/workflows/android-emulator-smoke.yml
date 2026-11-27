@@ -64,11 +64,27 @@ jobs:
             ${{ matrix.module }}/build/reports/lint-results-*.xml
           if-no-files-found: ignore
 
+  relay-security-tests:
+    name: Relay prompt-context security tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install relay dependencies
+        run: python -m pip install -r server/requirements.txt
+      - name: Run relay security tests
+        run: python -m unittest discover -s server -p 'test_*.py'
+
   android-10-emulator:
     name: Android 10 (API 29) end-to-end instrumented tests
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    needs: unit-lint-build
+    needs: [unit-lint-build, relay-security-tests]
     steps:
       - name: Check out source
         uses: actions/checkout@v7
