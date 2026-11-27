@@ -409,7 +409,7 @@ public final class Prefs {
     }
 
     public static String provider(Context c) {
-        return normalizeProvider(get(c).getString(PROVIDER, PROVIDER_CHATGPT));
+        return normalizeProvider(get(c).getString(PROVIDER, PROVIDER_GEMINI));
     }
 
     /** Unknown stored provider ids resolve to ChatGPT rather than to undefined behavior. */
