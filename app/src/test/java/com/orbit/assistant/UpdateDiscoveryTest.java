@@ -38,7 +38,7 @@ public final class UpdateDiscoveryTest {
     static final String APK_SHA256 =
             "a1b2c3d4e5f6071829304152637485960718293a4b5c6d7e8f90112233445566";
     private static final String DOWNLOAD_BASE =
-            "https://github.com/lpnovi/Orbit-Assistant/releases/download/";
+            "https://github.com/sakib-s-projects/JARVIS-Mobile-Secure/releases/download/";
 
     // ---- structural eligibility -------------------------------------------------------------------
 
