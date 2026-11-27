@@ -3,7 +3,7 @@ name: Verify JARVIS release signing (no publish)
 on:
   push:
     branches:
-      - h1-updater-migration
+      - h1-main-port
   workflow_dispatch:
 
 permissions:
