@@ -317,7 +317,12 @@ public final class ChatGptBrowserAuthTest {
         ChatGptBrowserAuth.start(context, recorder, 300L);
         ChatGptBrowserAuth.Attempt attempt = ChatGptBrowserAuth.activeForTest();
         long until = System.currentTimeMillis() + 5000L;
-        while (!attempt.server.isClosed() && System.currentTimeMillis() < until) Thread.sleep(50);
+        // Closing the socket happens just before the timeout callback is posted to the main
+        // looper. Wait for the callback itself, not only the socket close, to avoid racing it.
+        while (recorder.failed.get() == 0 && System.currentTimeMillis() < until) {
+            ShadowLooper.idleMainLooper();
+            Thread.sleep(50);
+        }
         ShadowLooper.idleMainLooper();
         assertTrue(attempt.server.isClosed());
         assertEquals(1, recorder.failed.get());

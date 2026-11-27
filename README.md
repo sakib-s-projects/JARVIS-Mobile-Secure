@@ -16,7 +16,7 @@ Bangla-first personal assistant project with a modular Android app, optional loc
 
 This repository is the JARVIS project source. The Android application display name is **JARVIS Assistant**. The project is being migrated from an upstream Orbit Assistant codebase, so some internal identifiers and compatibility strings still contain the former name.
 
-The migration is intentionally staged. User-facing identity is being changed to JARVIS while Android package IDs, signing identity, persistent storage keys, backup formats, IPC contracts, and updater verification remain compatible until their dedicated migration tests are complete.
+The migration is intentionally staged. User-facing identity is being changed to JARVIS. Android package IDs, persistent storage keys, backup formats, IPC contracts, and updater manifest/asset formats remain compatible where required. **The Android signing identity has changed** because the historical private key could not be recovered; APKs signed with the new JARVIS certificate cannot update installations signed with the historical certificate. See the release and updater status below before changing installations.
 
 ## Project priorities
 
@@ -60,7 +60,7 @@ The relay is not considered production-ready merely because CI passes. Live HTTP
 
 ## Release and updater status
 
-This repository currently has no published GitHub Releases. The in-app updater remains pinned to the upstream release source until this JARVIS repository publishes compatible, verified release assets signed with the expected Android signing identity and the updater migration is tested.
+The in-app updater and release-notes feed now resolve releases from this JARVIS repository. The update manifest remains `orbit-update.json` (schema 1), and the historical APK asset filename `Orbit-Assistant-v<version>.apk` is retained for manifest/asset compatibility. **Signing identity changed:** the historical private signing key could not be recovered, so this repository now uses a new JARVIS signing certificate. Builds signed with the previous certificate cannot be updated in-place by this new certificate; users on an older differently-signed build will need a separately planned fresh-install/migration path. Do not promise an in-app upgrade from the old signing identity. The repository must publish a release signed with the new pinned JARVIS identity before updates are live. No production release is implied by a CI artifact.
 
 Do not install unofficial APKs or treat a successful CI artifact as a signed production release. A debug APK is for development/testing only.
 

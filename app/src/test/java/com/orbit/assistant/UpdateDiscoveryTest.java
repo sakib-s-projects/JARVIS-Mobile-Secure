@@ -14,6 +14,8 @@ import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,11 +36,76 @@ import java.util.List;
 public final class UpdateDiscoveryTest {
 
     static final String CERTIFICATE_SHA256 =
-            "7D:AD:61:93:85:DF:F1:1E:C7:31:AA:55:5F:2B:44:8A:94:3C:73:91:81:3D:1A:94:DF:1C:B4:23:2E:CD:41:E3";
+            "84:D3:41:4B:60:EA:65:74:E0:A0:E2:72:18:84:F4:D8:F8:9D:39:09:AA:72:64:3F:CE:F0:2C:14:93:A0:68:8F";
     static final String APK_SHA256 =
             "a1b2c3d4e5f6071829304152637485960718293a4b5c6d7e8f90112233445566";
     private static final String DOWNLOAD_BASE =
-            "https://github.com/lpnovi/Orbit-Assistant/releases/download/";
+            "https://github.com/sakib-s-projects/JARVIS-Mobile-Secure/releases/download/";
+
+    /** All GitHub-edition update and notes endpoints must be owned by this JARVIS repository. */
+    @Test public void githubEditionUsesOnlyJarvisOwnedReleaseEndpoints() {
+        assertEquals("https://api.github.com/repos/sakib-s-projects/JARVIS-Mobile-Secure/releases/latest",
+                OrbitEdition.latestReleaseApi());
+        assertEquals("https://api.github.com/repos/sakib-s-projects/JARVIS-Mobile-Secure/releases?per_page=10",
+                OrbitEdition.releasesListApi(10));
+        assertEquals("https://github.com/sakib-s-projects/JARVIS-Mobile-Secure/releases/download/",
+                OrbitEdition.releaseDownloadBase());
+    }
+
+    // ---- trusted update hosts ----------------------------------------------------------------------
+
+    @Test public void updateHostAllowlistAcceptsOnlyGitHubOwnedDownloadHosts() {
+        for (String host : new String[]{"github.com", "api.github.com",
+                "raw.githubusercontent.com", "release-assets.githubusercontent.com",
+                "objects.githubusercontent.com"}) {
+            assertTrue(host, OrbitUpdater.isAllowedUpdateHost(host));
+        }
+        for (String host : new String[]{"github.com.attacker.test", "api.github.com.evil",
+                "notgithub.com", "githubusercontent.com.attacker.test",
+                "notgithubusercontent.com", "attacker.githubusercontent.com",
+                "localhost", "127.0.0.1", "example.com"}) {
+            assertFalse(host, OrbitUpdater.isAllowedUpdateHost(host));
+        }
+        assertTrue("host matching is case-insensitive",
+                OrbitUpdater.isAllowedUpdateHost("API.GITHUB.COM"));
+        assertFalse("a missing host is never trusted", OrbitUpdater.isAllowedUpdateHost(null));
+    }
+    @Test public void updateUrlsRequireHttpsAndAnExactTrustedHost() {
+        assertTrue(OrbitUpdater.isAllowedUpdateUrl("https://github.com/releases/download/tag/file.apk"));
+        assertTrue(OrbitUpdater.isAllowedUpdateUrl("https://release-assets.githubusercontent.com/file"));
+        assertFalse(OrbitUpdater.isAllowedUpdateUrl("http://github.com/releases/file.apk"));
+        assertFalse(OrbitUpdater.isAllowedUpdateUrl("https://attacker.githubusercontent.com/file.apk"));
+        assertFalse(OrbitUpdater.isAllowedUpdateUrl("https://github.com.attacker.test/file.apk"));
+        assertFalse(OrbitUpdater.isAllowedUpdateUrl("file:///tmp/update.apk"));
+        assertFalse(OrbitUpdater.isAllowedUpdateUrl("not a URL"));
+        assertFalse(OrbitUpdater.isAllowedUpdateUrl(null));
+    }
+
+    @Test public void updaterAllowsAtMostFiveRedirectHops() {
+        for (int redirectsFollowed = 0; redirectsFollowed < 5; redirectsFollowed++) {
+            assertTrue("redirect hop " + (redirectsFollowed + 1),
+                    OrbitUpdater.canFollowRedirect(redirectsFollowed));
+        }
+        assertFalse("sixth redirect must be refused", OrbitUpdater.canFollowRedirect(5));
+        assertFalse("negative redirect count is invalid", OrbitUpdater.canFollowRedirect(-1));
+    }
+
+    @Test public void apkChecksumVerificationMatchesActualFileBytes() throws Exception {
+        File apk = File.createTempFile("jarvis-checksum-", ".apk");
+        try {
+            try (FileOutputStream out = new FileOutputStream(apk)) {
+                out.write("abc".getBytes("UTF-8"));
+            }
+            assertTrue(OrbitUpdater.matchesApkChecksum(apk,
+                    "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"));
+            assertFalse(OrbitUpdater.matchesApkChecksum(apk,
+                    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
+            assertFalse(OrbitUpdater.matchesApkChecksum(apk, "not-a-sha256"));
+            assertFalse(OrbitUpdater.matchesApkChecksum(apk, null));
+        } finally {
+            if (apk.exists()) assertTrue("temporary checksum fixture should be deleted", apk.delete());
+        }
+    }
 
     // ---- structural eligibility -------------------------------------------------------------------
 
@@ -310,6 +377,98 @@ public final class UpdateDiscoveryTest {
                     .put("certificateSha256", CERTIFICATE_SHA256);
         } catch (Exception e) {
             throw new AssertionError("could not build a manifest fixture", e);
+        }
+    }
+
+    @Test public void invalidVersionCodesAreRejected() throws Exception {
+        rejects(release("v0.9.9.9", false, false), manifest("0.9.9.9", 0L),
+                Prefs.CHANNEL_STABLE, "a zero versionCode");
+        rejects(release("v0.9.9.9", false, false), manifest("0.9.9.9", -1L),
+                Prefs.CHANNEL_STABLE, "a negative versionCode");
+    }
+
+    @Test public void missingApkAssetIsRejected() throws Exception {
+        JSONObject release = release("v0.9.9.9", false, false);
+        JSONArray assets = release.getJSONArray("assets");
+        JSONArray remaining = new JSONArray();
+        for (int i = 0; i < assets.length(); i++) {
+            JSONObject asset = assets.getJSONObject(i);
+            if (!"Orbit-Assistant-v0.9.9.9.apk".equals(asset.getString("name"))) {
+                remaining.put(asset);
+            }
+        }
+        release.put("assets", remaining);
+        rejects(release, manifest("0.9.9.9", 99999L), Prefs.CHANNEL_STABLE,
+                "a release without its APK asset");
+    }
+
+    @Test public void apkAssetSizeMustBePositiveAndWithinTheLimit() throws Exception {
+        for (long size : new long[]{0L, -1L, 524288001L}) {
+            JSONObject release = release("v0.9.9.9", false, false);
+            JSONArray assets = release.getJSONArray("assets");
+            for (int i = 0; i < assets.length(); i++) {
+                JSONObject asset = assets.getJSONObject(i);
+                if ("Orbit-Assistant-v0.9.9.9.apk".equals(asset.getString("name"))) {
+                    asset.put("size", size);
+                }
+            }
+            rejects(release, manifest("0.9.9.9", 99999L), Prefs.CHANNEL_STABLE,
+                    "an APK asset with invalid size " + size);
+        }
+    }
+
+    @Test public void apkAssetMustUseTheExactOfficialReleaseUrl() throws Exception {
+        JSONObject release = release("v0.9.9.9", false, false);
+        JSONArray assets = release.getJSONArray("assets");
+        for (int i = 0; i < assets.length(); i++) {
+            JSONObject asset = assets.getJSONObject(i);
+            if ("Orbit-Assistant-v0.9.9.9.apk".equals(asset.getString("name"))) {
+                asset.put("browser_download_url", "https://github.com.attacker.test/fake.apk");
+            }
+        }
+        rejects(release, manifest("0.9.9.9", 99999L), Prefs.CHANNEL_STABLE,
+                "an APK asset with a forged download URL");
+    }
+
+    @Test public void apkMetadataAcceptsOnlyExactNewerSingleSignerRelease() throws Exception {
+        OrbitUpdater.validateApkMetadata("com.orbit.assistant", 99999L, "0.9.9.9",
+                99999L, "0.9.9.9", false, 1, CERTIFICATE_SHA256, CERTIFICATE_SHA256, 99998L);
+    }
+
+    @Test public void apkMetadataRejectsWrongPackageAndVersion() {
+        rejectsApkMetadata("com.example.other", 99999L, "0.9.9.9",
+                99999L, "0.9.9.9", false, 1, CERTIFICATE_SHA256, CERTIFICATE_SHA256, 99998L);
+        rejectsApkMetadata("com.orbit.assistant", 99998L, "0.9.9.9",
+                99999L, "0.9.9.9", false, 1, CERTIFICATE_SHA256, CERTIFICATE_SHA256, 99997L);
+        rejectsApkMetadata("com.orbit.assistant", 99999L, "0.9.9.8",
+                99999L, "0.9.9.9", false, 1, CERTIFICATE_SHA256, CERTIFICATE_SHA256, 99998L);
+    }
+
+    @Test public void apkMetadataRejectsDowngradesAndInvalidSignerSets() {
+        rejectsApkMetadata("com.orbit.assistant", 99998L, "0.9.9.9",
+                99998L, "0.9.9.9", false, 1, CERTIFICATE_SHA256, CERTIFICATE_SHA256, 99998L);
+        rejectsApkMetadata("com.orbit.assistant", 99999L, "0.9.9.9",
+                99999L, "0.9.9.9", true, 2, CERTIFICATE_SHA256, CERTIFICATE_SHA256, 99998L);
+        rejectsApkMetadata("com.orbit.assistant", 99999L, "0.9.9.9",
+                99999L, "0.9.9.9", false, 0, CERTIFICATE_SHA256, CERTIFICATE_SHA256, 99998L);
+        rejectsApkMetadata("com.orbit.assistant", 99999L, "0.9.9.9",
+                99999L, "0.9.9.9", false, 1, "00", CERTIFICATE_SHA256, 99998L);
+        rejectsApkMetadata("com.orbit.assistant", 99999L, "0.9.9.9",
+                99999L, "0.9.9.9", false, 1, CERTIFICATE_SHA256, "00", 99998L);
+    }
+
+    private static void rejectsApkMetadata(String packageName, long versionCode, String versionName,
+                                          long expectedVersionCode, String expectedVersionName,
+                                          boolean multipleSigners, int signerCount,
+                                          String actualCertificate, String releaseCertificate,
+                                          long installedVersionCode) {
+        try {
+            OrbitUpdater.validateApkMetadata(packageName, versionCode, versionName,
+                    expectedVersionCode, expectedVersionName, multipleSigners, signerCount,
+                    actualCertificate, releaseCertificate, installedVersionCode);
+            fail("APK metadata must be rejected");
+        } catch (Exception expected) {
+            // Invalid APK metadata must fail closed.
         }
     }
 

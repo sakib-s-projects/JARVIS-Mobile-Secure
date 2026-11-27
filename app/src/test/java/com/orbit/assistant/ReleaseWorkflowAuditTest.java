@@ -167,9 +167,8 @@ public final class ReleaseWorkflowAuditTest {
                 "the permanent certificate is verified");
         contains(yaml, "EXPECTED_PACKAGE_NAME: com.orbit.assistant",
                 "the package name is pinned in the workflow");
-        contains(yaml, "EXPECTED_CERT_SHA256: 7D:AD:61:93:85:DF:F1:1E:C7:31:AA:55:5F:2B:44:8A:"
-                        + "94:3C:73:91:81:3D:1A:94:DF:1C:B4:23:2E:CD:41:E3",
-                "the permanent Orbit certificate is pinned in the workflow");
+        contains(yaml, "EXPECTED_CERT_SHA256: 84:D3:41:4B:60:EA:65:74:E0:A0:E2:72:18:84:F4:D8:F8:9D:39:09:AA:72:64:3F:CE:F0:2C:14:93:A0:68:8F",
+                "the permanent JARVIS certificate is pinned in the workflow");
         contains(yaml, "sha256sum", "the APK checksum file is generated");
         contains(yaml, "\"schema\": 1", "the manifest schema stays 1 for older Orbit installs");
         contains(yaml, "orbit-update.json", "the update manifest is generated and published");
@@ -192,6 +191,27 @@ public final class ReleaseWorkflowAuditTest {
         String compiledIn = (String) field.get(null);
         assertTrue("the workflow pin and the pin inside OrbitUpdater must be identical",
                 yaml.contains("EXPECTED_CERT_SHA256: " + compiledIn));
+    }
+
+    /** The optional Local APK is a separately installable trust boundary and must be verified too. */
+    @Test public void theLocalComponentIsVerifiedBeforeItCanBePublished() {
+        String yaml = workflow();
+        contains(yaml, "component_apk=\"local/build/outputs/apk/release/local-release.apk\"",
+                "the release build must produce the Local component");
+        contains(yaml, "EXPECTED_COMPONENT_PACKAGE_NAME: com.orbit.assistant.local",
+                "the component package is pinned");
+        contains(yaml, "::error::JARVIS Local component package name verification failed.",
+                "the component package is verified");
+        contains(yaml, "::error::JARVIS Local component version verification failed.",
+                "the component versionName and versionCode must match the main APK");
+        contains(yaml, "::error::JARVIS Local component signer-count verification failed.",
+                "the component must have exactly one signer");
+        contains(yaml, "::error::JARVIS Local component signing certificate verification failed.",
+                "the component must use the permanent trusted certificate");
+        contains(yaml, "COMPONENT_SHA256", "the component checksum is included in the manifest");
+        contains(yaml, "COMPONENT_SIZE", "the component size is included in the manifest");
+        contains(yaml, "component_checksum_path", "the component checksum is published as an asset");
+        contains(yaml, "\"component\": {", "the component metadata is added to the update manifest");
     }
 
     // ---- release notes -------------------------------------------------------------------------------
@@ -222,4 +242,34 @@ public final class ReleaseWorkflowAuditTest {
         }
         fail("CHANGELOG.md was not found above " + start);
     }
+    // ---- signing secrets and publication boundary ---------------------------------------------------
+
+    @Test public void allReleaseSigningSecretsAreInjectedOnlyIntoTheStepsThatNeedThem() {
+        String yaml = workflow();
+        contains(yaml, "ORBIT_RELEASE_KEYSTORE_B64: ${{ secrets.ORBIT_RELEASE_KEYSTORE_B64 }}",
+                "the keystore is sourced from the repository secret");
+        contains(yaml, "ORBIT_RELEASE_STORE_PASSWORD: ${{ secrets.ORBIT_RELEASE_STORE_PASSWORD }}",
+                "the keystore password is sourced from a secret");
+        contains(yaml, "ORBIT_RELEASE_KEY_PASSWORD: ${{ secrets.ORBIT_RELEASE_KEY_PASSWORD }}",
+                "the signing-key password is sourced from a secret");
+        contains(yaml, "ORBIT_RELEASE_KEY_ALIAS: ${{ secrets.ORBIT_RELEASE_KEY_ALIAS }}",
+                "the signing-key alias is sourced from a secret");
+        contains(yaml, "if [[ -z \"${ORBIT_RELEASE_KEYSTORE_B64:-}\" ]]; then",
+                "a missing keystore fails closed before the release build");
+        contains(yaml, "rm -f \"${RUNNER_TEMP}/orbit-release.jks\"",
+                "the temporary keystore is removed even when a later step fails");
+    }
+
+    @Test public void onlyVersionTagsOrExplicitDispatchCanStartARelease() {
+        String yaml = workflow();
+        contains(yaml, "permissions:\n  contents: write",
+                "the publishing workflow receives the minimum repository permission");
+        contains(yaml, "tags:\n      - 'v*'",
+                "only version tags automatically start a release");
+        contains(yaml, "workflow_dispatch:",
+                "manual release dispatch is explicit");
+        assertTrue("a release must never publish from an untrusted pull request",
+                !yaml.contains("pull_request:"));
+    }
+
 }

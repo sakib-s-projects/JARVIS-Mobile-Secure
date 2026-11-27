@@ -54,10 +54,11 @@ public final class OrbitUpdater {
      * from turning one update check into a dozen requests.
      */
     private static final int MAX_MANIFEST_FETCHES = 4;
+    private static final int MAX_REDIRECTS = 5;
     private static final String UPDATE_MANIFEST_NAME = "orbit-update.json";
     private static final String PACKAGE_NAME = "com.orbit.assistant";
     private static final String CERTIFICATE_SHA256 =
-            "7D:AD:61:93:85:DF:F1:1E:C7:31:AA:55:5F:2B:44:8A:94:3C:73:91:81:3D:1A:94:DF:1C:B4:23:2E:CD:41:E3";
+            "84:D3:41:4B:60:EA:65:74:E0:A0:E2:72:18:84:F4:D8:F8:9D:39:09:AA:72:64:3F:CE:F0:2C:14:93:A0:68:8F";
     private static final int SCHEMA = 1;
     private static final int MAX_JSON_BYTES = 256 * 1024;
     /**
@@ -449,7 +450,7 @@ public final class OrbitUpdater {
         if (!candidate.getPath().startsWith(root.getPath() + File.separator) || !candidate.isFile()) {
             throw new VerificationException("The downloaded update file is unavailable.");
         }
-        if (!normalizeSha256(sha256(candidate)).equals(normalizeSha256(release.apkSha256))) {
+        if (!matchesApkChecksum(candidate, release.apkSha256)) {
             throw new VerificationException("The downloaded APK checksum did not match the official release.");
         }
 
@@ -459,28 +460,13 @@ public final class OrbitUpdater {
         if (info == null || info.signingInfo == null) {
             throw new VerificationException("Android could not inspect the downloaded APK.");
         }
-        if (!PACKAGE_NAME.equals(info.packageName)) {
-            throw new VerificationException("The downloaded APK has the wrong package name.");
-        }
-        if (info.getLongVersionCode() != release.versionCode ||
-                !release.versionName.equals(info.versionName)) {
-            throw new VerificationException("The downloaded APK version does not match the release manifest.");
-        }
-        if (info.getLongVersionCode() <= BuildConfig.VERSION_CODE) {
-            throw new VerificationException("The downloaded APK is not newer than this JARVIS installation.");
-        }
-        if (info.signingInfo.hasMultipleSigners()) {
-            throw new VerificationException("The downloaded APK has an unexpected signer set.");
-        }
         Signature[] signers = info.signingInfo.getApkContentsSigners();
-        if (signers == null || signers.length != 1) {
-            throw new VerificationException("The downloaded APK signer could not be verified.");
-        }
-        String certificate = hex(MessageDigest.getInstance("SHA-256").digest(signers[0].toByteArray()));
-        if (!normalizeSha256(certificate).equals(normalizeSha256(CERTIFICATE_SHA256)) ||
-                !normalizeSha256(release.certificateSha256).equals(normalizeSha256(CERTIFICATE_SHA256))) {
-            throw new VerificationException("The downloaded APK is not signed by JARVIS's permanent certificate.");
-        }
+        String certificate = signers == null || signers.length != 1 ? ""
+                : hex(MessageDigest.getInstance("SHA-256").digest(signers[0].toByteArray()));
+        validateApkMetadata(info.packageName, info.getLongVersionCode(), info.versionName,
+                release.versionCode, release.versionName, info.signingInfo.hasMultipleSigners(),
+                signers == null ? 0 : signers.length, certificate, release.certificateSha256,
+                BuildConfig.VERSION_CODE);
         log("verification_complete", "package_version_certificate_valid");
     }
 
@@ -747,17 +733,17 @@ public final class OrbitUpdater {
     }
 
     private static HttpURLConnection open(String value, String accept) throws Exception {
-        URL current = new URL(value);
-        if (!isAllowedUpdateHost(current.getHost()) || !"https".equalsIgnoreCase(current.getProtocol())) {
+        if (!isAllowedUpdateUrl(value)) {
             throw new UpdateException("JARVIS updates require an official HTTPS host.");
         }
-        for (int redirects = 0; redirects <= 5; redirects++) {
+        URL current = new URL(value);
+        for (int redirects = 0; ; redirects++) {
             HttpURLConnection connection = (HttpURLConnection) current.openConnection();
             connection.setInstanceFollowRedirects(false);
             connection.setConnectTimeout(15000);
             connection.setReadTimeout(45000);
             connection.setRequestProperty("Accept", accept);
-            connection.setRequestProperty("User-Agent", "OrbitAssistant/" + BuildConfig.VERSION_NAME + " (Android updater)");
+            connection.setRequestProperty("User-Agent", "JARVISAssistant/" + BuildConfig.VERSION_NAME + " (Android updater)");
             int status = connection.getResponseCode();
             if (status == HttpURLConnection.HTTP_MOVED_PERM ||
                     status == HttpURLConnection.HTTP_MOVED_TEMP ||
@@ -765,11 +751,11 @@ public final class OrbitUpdater {
                     status == 307 || status == 308) {
                 String location = connection.getHeaderField("Location");
                 connection.disconnect();
-                if (location == null || location.trim().isEmpty() || redirects == 5) {
+                if (location == null || location.trim().isEmpty() || !canFollowRedirect(redirects)) {
                     throw new UpdateException("The update service redirect is invalid or excessive.");
                 }
                 URL next = new URL(current, location);
-                if (!"https".equalsIgnoreCase(next.getProtocol()) || !isAllowedUpdateHost(next.getHost())) {
+                if (!isAllowedUpdateUrl(next.toString())) {
                     throw new UpdateException("The update service redirected to an untrusted host.");
                 }
                 current = next;
@@ -777,23 +763,34 @@ public final class OrbitUpdater {
             }
             return connection;
         }
-        throw new UpdateException("The update service redirect limit was exceeded.");
     }
 
-    private static boolean isAllowedUpdateHost(String host) {
+    static boolean canFollowRedirect(int redirectsFollowed) {
+        return redirectsFollowed >= 0 && redirectsFollowed < MAX_REDIRECTS;
+    }
+
+    static boolean isAllowedUpdateUrl(String value) {
+        if (value == null) return false;
+        try {
+            URL url = new URL(value);
+            return "https".equalsIgnoreCase(url.getProtocol()) && isAllowedUpdateHost(url.getHost());
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    static boolean isAllowedUpdateHost(String host) {
         if (host == null) return false;
         String normalized = host.toLowerCase(Locale.US);
         return normalized.equals("github.com") || normalized.equals("api.github.com")
                 || normalized.equals("raw.githubusercontent.com")
                 || normalized.equals("release-assets.githubusercontent.com")
-                || normalized.equals("objects.githubusercontent.com")
-                || normalized.endsWith(".githubusercontent.com");
+                || normalized.equals("objects.githubusercontent.com");
     }
 
     private static void requireHttpsFinalUrl(HttpURLConnection connection) throws Exception {
         if (connection == null || connection.getURL() == null ||
-                !"https".equalsIgnoreCase(connection.getURL().getProtocol()) ||
-                !isAllowedUpdateHost(connection.getURL().getHost())) {
+                !isAllowedUpdateUrl(connection.getURL().toString())) {
             throw new UpdateException("The update service final URL is not trusted.");
         }
     }
@@ -825,6 +822,37 @@ public final class OrbitUpdater {
             }
             return out.toByteArray();
         }
+    }
+
+    /** Pure metadata/signature gate, separated so every rejection path can be unit-tested. */
+    static void validateApkMetadata(String packageName, long versionCode, String versionName,
+                                    long expectedVersionCode, String expectedVersionName,
+                                    boolean multipleSigners, int signerCount,
+                                    String actualCertificateSha256, String releaseCertificateSha256,
+                                    long installedVersionCode) throws Exception {
+        if (!PACKAGE_NAME.equals(packageName)) {
+            throw new VerificationException("The downloaded APK has the wrong package name.");
+        }
+        if (versionCode != expectedVersionCode || expectedVersionName == null ||
+                !expectedVersionName.equals(versionName)) {
+            throw new VerificationException("The downloaded APK version does not match the release manifest.");
+        }
+        if (versionCode <= installedVersionCode) {
+            throw new VerificationException("The downloaded APK is not newer than this JARVIS installation.");
+        }
+        if (multipleSigners || signerCount != 1) {
+            throw new VerificationException("The downloaded APK has an unexpected signer set.");
+        }
+        if (!normalizeSha256(actualCertificateSha256).equals(normalizeSha256(CERTIFICATE_SHA256)) ||
+                !normalizeSha256(releaseCertificateSha256).equals(normalizeSha256(CERTIFICATE_SHA256))) {
+            throw new VerificationException("The downloaded APK is not signed by JARVIS's permanent certificate.");
+        }
+    }
+
+    static boolean matchesApkChecksum(File file, String expectedSha256) throws Exception {
+        return file != null && file.isFile() && expectedSha256 != null
+                && SHA256_PATTERN.matcher(expectedSha256).matches()
+                && normalizeSha256(sha256(file)).equals(normalizeSha256(expectedSha256));
     }
 
     private static String sha256(File file) throws Exception {

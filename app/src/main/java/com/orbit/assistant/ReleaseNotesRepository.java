@@ -22,7 +22,7 @@ import java.util.regex.Pattern;
 
 /** Public GitHub stable-release notes with a private, last-known-good offline cache. */
 public final class ReleaseNotesRepository {
-    private static final String REPO = "https://api.github.com/repos/lpnovi/Orbit-Assistant";
+    private static final String REPO = "https://api.github.com/repos/sakib-s-projects/JARVIS-Mobile-Secure";
     private static final String API_LATEST = REPO + "/releases/latest";
     private static final String API_TAGS = REPO + "/tags?per_page=15";
     private static final String API_BY_TAG = REPO + "/releases/tags/";
@@ -48,7 +48,7 @@ public final class ReleaseNotesRepository {
             this.tag = tag;
             this.versionName = versionName;
             this.title = title == null || title.trim().isEmpty()
-                    ? "Orbit Assistant " + tag : title.trim();
+                    ? "JARVIS Assistant " + tag : title.trim();
             this.body = body == null ? "" : body.trim();
             this.publishedAt = publishedAt == null ? "" : publishedAt.trim();
         }
@@ -66,13 +66,13 @@ public final class ReleaseNotesRepository {
         EXECUTOR.execute(() -> {
             try {
                 List<ReleaseNote> fresh = fetch();
-                if (fresh.isEmpty()) throw new IllegalStateException("No stable Orbit releases were returned.");
+                if (fresh.isEmpty()) throw new IllegalStateException("No stable JARVIS releases were returned.");
                 save(app, fresh);
                 callback.onLoaded(fresh, false);
             } catch (Exception ignored) {
                 List<ReleaseNote> cached = loadCached(app);
                 if (!cached.isEmpty()) callback.onLoaded(cached, true);
-                else callback.onError("Orbit could not load release notes. Check your connection and try again.");
+                else callback.onError("JARVIS could not load release notes. Check your connection and try again.");
             }
         });
     }
@@ -173,7 +173,7 @@ public final class ReleaseNotesRepository {
         connection.setReadTimeout(15_000);
         connection.setInstanceFollowRedirects(false);
         connection.setRequestProperty("Accept", "application/vnd.github+json");
-        connection.setRequestProperty("User-Agent", "Orbit-Assistant/" + BuildConfig.VERSION_NAME);
+        connection.setRequestProperty("User-Agent", "JARVIS-Assistant/" + BuildConfig.VERSION_NAME);
         try {
             if (connection.getResponseCode() != 200)
                 throw new IllegalStateException("GitHub returned HTTP " + connection.getResponseCode());
