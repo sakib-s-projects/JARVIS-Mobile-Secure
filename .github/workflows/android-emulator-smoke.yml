@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   pull_request:
   push:
-    branches: [ main, h1-main-port, h2-chatgpt-signin-hardening ]
+    branches: [ main, h1-main-port, h2-chatgpt-signin-hardening, h1-h2-h3-integration ]
 
 permissions:
   contents: read

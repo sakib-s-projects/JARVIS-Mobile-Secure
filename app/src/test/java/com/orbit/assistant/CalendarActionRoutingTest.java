@@ -190,7 +190,7 @@ public final class CalendarActionRoutingTest {
         assertTrue("the relay server prompt must describe it",
                 server.contains("ADD_CALENDAR_EVENTS"));
         assertTrue("and the server still filters to announced capabilities only",
-                server.contains("a.type in announced"));
+                server.contains("action.type in announced"));
     }
 
     @Test public void theManifestDeclaresBothCalendarPermissions() {

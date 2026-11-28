@@ -2,6 +2,7 @@ package com.orbit.assistant;
 
 import java.security.Key;
 import java.security.KeyStoreSpi;
+import java.security.KeyStoreException;
 import java.security.Provider;
 import java.security.SecureRandom;
 import java.security.Security;
@@ -27,6 +28,7 @@ import javax.crypto.SecretKey;
  */
 final class TestKeystore {
     static final Map<String, SecretKey> KEYS = new HashMap<>();
+    static boolean FAIL_DELETE;
     private static final String NAME = "AndroidKeyStore";
 
     private TestKeystore() {}
@@ -34,12 +36,14 @@ final class TestKeystore {
     static void install() {
         Security.removeProvider(NAME);
         KEYS.clear();
+        FAIL_DELETE = false;
         Security.addProvider(new FakeProvider());
     }
 
     static void uninstall() {
         Security.removeProvider(NAME);
         KEYS.clear();
+        FAIL_DELETE = false;
     }
 
     static final class FakeProvider extends Provider {
@@ -60,7 +64,10 @@ final class TestKeystore {
         }
         @Override public void engineSetKeyEntry(String alias, byte[] key, Certificate[] chain) {}
         @Override public void engineSetCertificateEntry(String alias, Certificate cert) {}
-        @Override public void engineDeleteEntry(String alias) { KEYS.remove(alias); }
+        @Override public void engineDeleteEntry(String alias) throws KeyStoreException {
+            if (FAIL_DELETE) throw new KeyStoreException("test-only deletion failure");
+            KEYS.remove(alias);
+        }
         @Override public Enumeration<String> engineAliases() { return Collections.enumeration(KEYS.keySet()); }
         @Override public boolean engineContainsAlias(String alias) { return KEYS.containsKey(alias); }
         @Override public int engineSize() { return KEYS.size(); }

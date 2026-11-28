@@ -83,6 +83,7 @@ final class RelayProvider implements AiProvider {
             try {
                 URL url = new URL(backend.endsWith("/") ? backend + "assistant" : backend + "/assistant");
                 conn = (HttpURLConnection) url.openConnection();
+                disableRedirects(conn);
                 conn.setRequestMethod("POST");
                 conn.setConnectTimeout(15000);
                 conn.setReadTimeout(90000);
@@ -185,6 +186,7 @@ final class RelayProvider implements AiProvider {
             try {
                 URL url = new URL(backend.endsWith("/") ? backend + "assistant" : backend + "/assistant");
                 conn = (HttpURLConnection) url.openConnection();
+                disableRedirects(conn);
                 conn.setRequestMethod("POST");
                 conn.setConnectTimeout(15000);
                 conn.setReadTimeout(90000);
@@ -228,6 +230,10 @@ final class RelayProvider implements AiProvider {
                 if (conn != null) conn.disconnect();
             }
         });
+    }
+
+    static void disableRedirects(HttpURLConnection connection) {
+        connection.setInstanceFollowRedirects(false);
     }
 
     private static String bitmapToBase64(Bitmap source) {

@@ -85,15 +85,22 @@ final class OrbitExtensionSecretStore {
 
     static synchronized boolean clearAll(Context context) {
         if (context == null) return false;
-        boolean keyInvalidated = false;
+
+        // The encrypted preference is the only stored copy of these credentials. Remove and
+        // commit it first: if storage refuses the write, keep the Keystore key so the current
+        // installation's credentials remain recoverable. Once the ciphertext is gone, deleting
+        // the now-unreferenced key is best-effort; a Keystore cleanup failure must not make a
+        // completed credential removal look like a failed restore and trigger a misleading rollback.
+        if (!prefs(context).edit().remove(PREF_KEY).commit()) return false;
+
         try {
             KeyStore keyStore = KeyStore.getInstance(STORE);
             keyStore.load(null);
             if (keyStore.containsAlias(ALIAS)) keyStore.deleteEntry(ALIAS);
-            keyInvalidated = true;
-        } catch (Exception ignored) {}
-        boolean preferencesCleared = prefs(context).edit().remove(PREF_KEY).commit();
-        return keyInvalidated && preferencesCleared;
+        } catch (Exception ignored) {
+            // No encrypted credential data remains, so an orphaned empty key is harmless.
+        }
+        return true;
     }
 
     private static JSONObject encrypt(String value) throws Exception {
