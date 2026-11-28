@@ -13,8 +13,6 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 
-import java.util.Arrays;
-
 import javax.crypto.spec.SecretKeySpec;
 
 /** Restore must clear extension ciphertext even if best-effort Keystore key deletion fails. */
