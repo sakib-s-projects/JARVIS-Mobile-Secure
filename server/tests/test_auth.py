@@ -517,6 +517,20 @@ def test_cloudflare_adapter_forwards_screenshot_to_vision_adapter(monkeypatch):
     assert captured["timeout"] == relay_app.UPSTREAM_TIMEOUT_SECONDS
 
 
+def test_redirect_handler_refuses_all_redirect_targets():
+    import urllib.request
+    import app as relay_app
+
+    handler = relay_app.RejectRedirectHandler()
+    request = urllib.request.Request("https://adapter.example.workers.dev/v1/assistant")
+    for status in (301, 302, 303, 307, 308):
+        assert handler.redirect_request(
+            request, None, status, "redirect",
+            {"Location": "https://attacker.example/collect"},
+            "https://attacker.example/collect",
+        ) is None
+
+
 def test_cloudflare_adapter_rejects_redirects_without_following(monkeypatch):
     import io
     import urllib.error
