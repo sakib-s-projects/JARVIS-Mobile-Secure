@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>JARVIS Staging Test</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#0b1020;color:#eef2ff}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px}main{width:min(100%,520px);background:#151d32;border:1px solid #33415f;border-radius:18px;padding:24px;box-shadow:0 18px 50px #0006}h1{margin:0 0 8px;font-size:1.5rem}p{color:#bac7df;line-height:1.55}label{display:block;margin:20px 0 8px;font-weight:600}input{width:100%;padding:14px;border-radius:10px;border:1px solid #526381;background:#0b1020;color:#fff;font-size:16px}button{margin-top:16px;width:100%;padding:14px;border:0;border-radius:10px;background:#8ba7ff;color:#081126;font-size:16px;font-weight:700}button:disabled{opacity:.55}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1020;border-radius:10px;padding:14px;min-height:64px;color:#dbeafe}.small{font-size:.85rem;color:#9eacc6}
+</style></head><body><main><h1>JARVIS — Staging Test</h1>
+<p>এটি শুধু Staging Relay পরীক্ষা করে। কোনো APK ইনস্টল বা Production সংযোগ ব্যবহার করে না।</p>
+<label for="token">অস্থায়ী Web Test Token</label><input id="token" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Token এখানে পেস্ট করুন">
+<button id="run" type="button">Live Text Test চালাও</button>
+<p class="small">Token শুধু এই অনুরোধের Authorization header-এ পাঠানো হবে; browser storage-এ রাখা হবে না। পরীক্ষা শেষে ইনপুট মুছে যাবে।</p><pre id="result" aria-live="polite">পরীক্ষা শুরু করতে token দিন।</pre></main>
+<script>
+const tokenInput=document.getElementById("token");
+const runButton=document.getElementById("run");
+const result=document.getElementById("result");
+runButton.addEventListener("click",async()=>{
+ const token=tokenInput.value.trim(); tokenInput.value="";
+ if(token.length<32){result.textContent="Token কমপক্ষে ৩২ অক্ষরের হতে হবে।";return;}
+ runButton.disabled=true;result.textContent="Staging Relay পরীক্ষা চলছে…";
+ try{
+  const response=await fetch("/__staging/self-test",{method:"POST",headers:{"Authorization":"Bearer "+token,"Accept":"application/json"},cache:"no-store",credentials:"omit",redirect:"error"});
+  const body=await response.json().catch(()=>({detail:"Invalid JSON response"}));
+  result.textContent="HTTP "+response.status+"\n"+JSON.stringify(body,null,2);
+ }catch(error){result.textContent="Request failed: "+String(error);}
+ finally{runButton.disabled=false;}
+});
+</script></body></html>

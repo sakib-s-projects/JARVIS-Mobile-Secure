@@ -1,0 +1,104 @@
+name: Verify JARVIS Staging Adapter Live
+
+on:
+  push:
+    branches: [jarvis-branding, h3-memory-context-hardening]
+    paths:
+      - ".github/workflows/verify-staging-adapter.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jarvis-staging-adapter-live
+  cancel-in-progress: false
+
+jobs:
+  live-check:
+    name: Staging HTTP health and auth checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify staging health HTTP response
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(mktemp)"
+          trap 'rm -f "$body"' EXIT
+          status="$(curl --silent --show-error --proto '=https' --max-redirs 0 --connect-timeout 10 --max-time 20 -o "$body" -w '%{http_code}' 'https://jarvis-relay-adapter-staging.sakib468932.workers.dev/health')"
+          test "$status" = "200" || { echo "::error::Health endpoint returned HTTP $status, expected 200"; exit 1; }
+          python - "$body" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              data = json.load(f)
+          expected = {
+              "status": "ok",
+              "service": "jarvis-relay-cloudflare-adapter",
+              "stage": "staging",
+              "vision": False,
+          }
+          if data != expected:
+              raise SystemExit(f"Unexpected staging health payload: {data!r}")
+          print("PASS: /health returned HTTP 200 and the exact staging-only, vision-disabled payload.")
+          PY
+
+      - name: Verify unauthenticated text request is rejected
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(mktemp)"
+          trap 'rm -f "$body"' EXIT
+          status="$(curl --silent --show-error --proto '=https' --max-redirs 0 --connect-timeout 10 --max-time 20 -o "$body" -w '%{http_code}' -H 'Content-Type: application/json' --data '{"prompt":"JARVIS staging auth probe","locale":"bn-BD","capabilities":[]}' 'https://jarvis-relay-adapter-staging.sakib468932.workers.dev/v1/assistant')"
+          test "$status" = "401" || { echo "::error::Unauthenticated request returned HTTP $status, expected 401"; exit 1; }
+          python - "$body" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              data = json.load(f)
+          if data.get("error") != "AUTH_REQUIRED":
+              raise SystemExit(f"Unexpected auth rejection payload: {data!r}")
+          print("PASS: unauthenticated text-only request was rejected with HTTP 401 AUTH_REQUIRED.")
+          PY
+
+      - name: Verify invalid bearer token is rejected
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(mktemp)"
+          trap 'rm -f "$body"' EXIT
+          status="$(curl --silent --show-error --proto '=https' --max-redirs 0 --connect-timeout 10 --max-time 20 -o "$body" -w '%{http_code}' -H 'Content-Type: application/json' -H 'Authorization: Bearer deliberately-invalid-live-probe-token' --data '{"prompt":"JARVIS staging auth probe","locale":"bn-BD","capabilities":[]}' 'https://jarvis-relay-adapter-staging.sakib468932.workers.dev/v1/assistant')"
+          test "$status" = "401" || { echo "::error::Invalid-token request returned HTTP $status, expected 401"; exit 1; }
+          python - "$body" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              data = json.load(f)
+          if data.get("error") != "AUTH_REQUIRED":
+              raise SystemExit(f"Unexpected invalid-token rejection payload: {data!r}")
+          print("PASS: invalid bearer token was rejected with HTTP 401 AUTH_REQUIRED.")
+          PY
+
+      - name: Verify existing staging chat accepts a text-only request
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(mktemp)"
+          trap 'rm -f "$body"' EXIT
+          status="$(curl --silent --show-error --proto '=https' --max-redirs 0 --connect-timeout 10 --max-time 50 -o "$body" -w '%{http_code}' -H 'Content-Type: application/json' -H 'Accept: application/json' --data '{"message":"Reply with a short Bengali confirmation that the JARVIS staging text-only test is working. Do not request or perform any phone action.","lang":"bn-BD","persona":"jarvis","responseStyle":"balanced","history":[]}' 'https://jarvis-ai-connection-staging.sakib468932.workers.dev/api/chat')"
+          test "$status" = "200" || { echo "::error::Staging chat returned HTTP $status, expected 200"; exit 1; }
+          python - "$body" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              data = json.load(f)
+          reply = data.get("reply")
+          if not isinstance(reply, str) or not reply.strip():
+              raise SystemExit("Staging chat did not return a non-empty reply string.")
+          print("PASS: staging chat returned HTTP 200 and a non-empty text reply.")
+          print("Reply preview:", reply.strip()[:240].replace("\\n", " "))
+          PY
+
+      - name: Record scope boundary
+        if: success()
+        run: |
+          echo "Passed: live HTTPS health response, unauthenticated rejection, invalid-token rejection."
+          echo "Not tested: authenticated inference. This workflow intentionally has no secret and does not call the AI provider."
+          echo "Vision remains disabled; Production resources and billing are untouched."

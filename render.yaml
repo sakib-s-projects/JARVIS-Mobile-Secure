@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: jarvis-relay-staging
+    runtime: docker
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: ./server
+    plan: free
+    region: singapore
+    autoDeployTrigger: off
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: JARVIS_CLOUDFLARE_RELAY_URL
+        value: https://jarvis-relay-adapter-staging.sakib468932.workers.dev
+      - key: JARVIS_RELAY_TOKEN
+        sync: false
+      - key: JARVIS_CLOUDFLARE_RELAY_TOKEN
+        sync: false
