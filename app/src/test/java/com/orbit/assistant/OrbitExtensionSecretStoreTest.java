@@ -45,7 +45,7 @@ public final class OrbitExtensionSecretStoreTest {
         assertTrue(OrbitExtensionSecretStore.clearAll(context));
 
         assertFalse(context.getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE).contains(PREF_KEY));
-        // The orphaned key contains no credential data and can be cleaned up on a later install.
+        // The orphaned key remains, but no credential ciphertext exists for it to decrypt.
         assertTrue(TestKeystore.KEYS.containsKey(ALIAS));
     }
 
