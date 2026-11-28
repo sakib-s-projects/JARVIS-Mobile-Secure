@@ -18,6 +18,57 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
+      - name: Verify Render FastAPI staging health
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(mktemp)"
+          trap 'rm -f "$body"' EXIT
+          status="$(curl --silent --show-error --proto '=https' --max-redirs 0 --connect-timeout 10 --max-time 20 -o "$body" -w '%{http_code}' 'https://jarvis-relay-staging-ftiu.onrender.com/health')"
+          test "$status" = "200" || { echo "::error::Render staging health returned HTTP $status, expected 200"; exit 1; }
+          python - "$body" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              data = json.load(f)
+          if data != {"status": "ok", "service": "jarvis-relay"}:
+              raise SystemExit(f"Unexpected Render staging health payload: {data!r}")
+          print("PASS: Render FastAPI staging /health returned HTTP 200.")
+          PY
+
+      - name: Verify Render FastAPI rejects unauthenticated requests
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(mktemp)"
+          trap 'rm -f "$body"' EXIT
+          status="$(curl --silent --show-error --proto '=https' --max-redirs 0 --connect-timeout 10 --max-time 20 -o "$body" -w '%{http_code}' -H 'Content-Type: application/json' --data '{"prompt":"JARVIS staging authentication probe","capabilities":[]}' 'https://jarvis-relay-staging-ftiu.onrender.com/assistant')"
+          test "$status" = "401" || { echo "::error::Render staging unauthenticated request returned HTTP $status, expected 401"; exit 1; }
+          python - "$body" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              data = json.load(f)
+          if data.get("detail") != "Invalid relay token":
+              raise SystemExit(f"Unexpected Render staging auth response: {data!r}")
+          print("PASS: Render FastAPI rejected an unauthenticated request with HTTP 401.")
+          PY
+
+      - name: Verify Render FastAPI rejects invalid bearer tokens
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(mktemp)"
+          trap 'rm -f "$body"' EXIT
+          status="$(curl --silent --show-error --proto '=https' --max-redirs 0 --connect-timeout 10 --max-time 20 -o "$body" -w '%{http_code}' -H 'Content-Type: application/json' -H 'Authorization: Bearer deliberately-invalid-render-live-probe-token' --data '{"prompt":"JARVIS staging authentication probe","capabilities":[]}' 'https://jarvis-relay-staging-ftiu.onrender.com/assistant')"
+          test "$status" = "401" || { echo "::error::Render staging invalid-token request returned HTTP $status, expected 401"; exit 1; }
+          python - "$body" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              data = json.load(f)
+          if data.get("detail") != "Invalid relay token":
+              raise SystemExit(f"Unexpected Render staging invalid-token response: {data!r}")
+          print("PASS: Render FastAPI rejected an invalid bearer token with HTTP 401.")
+          PY
+
       - name: Verify staging health HTTP response
         shell: bash
         run: |
