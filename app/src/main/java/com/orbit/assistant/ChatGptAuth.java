@@ -656,6 +656,7 @@ public final class ChatGptAuth {
 
     private static HttpURLConnection jsonConnection(String url, String method, int connectMs, int readMs) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+        c.setInstanceFollowRedirects(false);
         c.setRequestMethod(method);
         c.setConnectTimeout(connectMs);
         c.setReadTimeout(readMs);
@@ -668,6 +669,7 @@ public final class ChatGptAuth {
 
     private static HttpURLConnection formConnection(String url, int connectMs, int readMs) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+        c.setInstanceFollowRedirects(false);
         c.setRequestMethod("POST");
         c.setConnectTimeout(connectMs);
         c.setReadTimeout(readMs);
