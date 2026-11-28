@@ -133,9 +133,11 @@ public final class ChatAiControlsTest {
         View pill = chat.modelPillForTest();
         chat.applySelection(ASTRA_MAX);
         assertEquals(ASTRA_MAX, AiSelections.forConversation(context, "a"));
-        assertEquals("chat B is untouched", AiSelections.FALLBACK,
+        AiSelection geminiDefault = AiSelection.of(Prefs.PROVIDER_GEMINI,
+                OrbitModelCatalog.GEMINI_38_FLASH, null);
+        assertEquals("chat B is untouched", geminiDefault,
                 AiSelections.forConversation(context, "b"));
-        assertEquals("the default is untouched", AiSelections.FALLBACK,
+        assertEquals("the default is untouched", geminiDefault,
                 AiSelections.globalDefault(context));
         assertTrue("the same control, updated", pill == chat.modelPillForTest());
         assertTrue(chat.modelPillForTest().getText().toString().contains("GPT-6 Astra"));

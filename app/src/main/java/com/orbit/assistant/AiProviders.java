@@ -17,6 +17,7 @@ import java.util.List;
  */
 public final class AiProviders {
     private static final ChatGptProvider CHATGPT = new ChatGptProvider();
+    private static final GeminiProvider GEMINI = new GeminiProvider();
     private static final AnthropicProvider ANTHROPIC = new AnthropicProvider();
     private static final XaiProvider XAI = new XaiProvider();
     private static final OrbitLocalProvider LOCAL = new OrbitLocalProvider();
@@ -25,7 +26,7 @@ public final class AiProviders {
 
     /** Presentation order for management UI: recommended first, advanced fallback last. */
     private static final List<AiProvider> ALL = Collections.unmodifiableList(
-            Arrays.asList(CHATGPT, ANTHROPIC, XAI, LOCAL, OPENROUTER, RELAY));
+            Arrays.asList(GEMINI, CHATGPT, ANTHROPIC, XAI, LOCAL, OPENROUTER, RELAY));
 
     private AiProviders() {}
 

@@ -305,6 +305,7 @@ public final class Prefs {
     public static final String PROVIDER_OPENROUTER = "openrouter";
     public static final String PROVIDER_ANTHROPIC = "anthropic";
     public static final String PROVIDER_XAI = "xai";
+    public static final String PROVIDER_GEMINI = "gemini";
 
     public static final String CHAT_TEXT_SMALL = "small";
     public static final String CHAT_TEXT_DEFAULT = "default";
@@ -408,14 +409,15 @@ public final class Prefs {
     }
 
     public static String provider(Context c) {
-        return normalizeProvider(get(c).getString(PROVIDER, PROVIDER_CHATGPT));
+        return normalizeProvider(get(c).getString(PROVIDER, PROVIDER_GEMINI));
     }
 
     /** Unknown stored provider ids resolve to ChatGPT rather than to undefined behavior. */
     public static String normalizeProvider(String provider) {
         if (PROVIDER_CHATGPT.equals(provider) || PROVIDER_RELAY.equals(provider) ||
                 PROVIDER_LOCAL.equals(provider) || PROVIDER_OPENROUTER.equals(provider)
-                || PROVIDER_ANTHROPIC.equals(provider) || PROVIDER_XAI.equals(provider)) return provider;
+                || PROVIDER_ANTHROPIC.equals(provider) || PROVIDER_XAI.equals(provider)
+                || PROVIDER_GEMINI.equals(provider)) return provider;
         return PROVIDER_CHATGPT;
     }
     public static String backendUrl(Context c) { return get(c).getString(BACKEND_URL, "").trim(); }

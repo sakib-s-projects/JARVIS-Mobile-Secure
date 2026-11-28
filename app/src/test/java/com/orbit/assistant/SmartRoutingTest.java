@@ -577,6 +577,8 @@ public final class SmartRoutingTest {
     }
 
     @Test public void leavingAutoRestoresTheStrengthLastUsedWithThatModel() {
+        // This scenario exercises ChatGPT's remembered model, not the new-install provider.
+        AiSelections.setGlobalDefault(context, TERRA);
         ModelLibraryStore.rememberProviderDefault(context, TERRA_HIGH);
         AiSelectorDialog picker = AiSelectorDialog.forTest(context, AiSelection.AUTO);
         assertTrue(picker.offeredModels().contains(OrbitModelCatalog.GPT_5_6_TERRA));

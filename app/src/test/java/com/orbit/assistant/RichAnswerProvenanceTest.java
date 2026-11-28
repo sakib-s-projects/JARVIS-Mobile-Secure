@@ -32,6 +32,7 @@ public class RichAnswerProvenanceTest {
     @Before public void setUp() {
         context = RuntimeEnvironment.getApplication();
         Prefs.get(context).edit().clear().putBoolean(Prefs.BACKGROUND_NOTIFICATIONS, false).commit();
+        AiSelections.setGlobalDefault(context, AiSelections.FALLBACK);
         ConversationStore.clear(context);
         RichAnswerTrace.clear(context);
         OrbitRequestManager.resetForTest();

@@ -41,6 +41,8 @@ public final class AiSelectionMigrationTest {
             AiSelection.of(Prefs.PROVIDER_CHATGPT, OrbitModelCatalog.SOL, AiStrength.HIGH);
     private static final AiSelection ASTRA_MAX =
             AiSelection.of(Prefs.PROVIDER_CHATGPT, OrbitModelCatalog.ASTRA, AiStrength.MAX);
+    private static final AiSelection GEMINI_DEFAULT =
+            AiSelection.of(Prefs.PROVIDER_GEMINI, OrbitModelCatalog.GEMINI_38_FLASH, null);
 
     @Before public void setUp() {
         context = RuntimeEnvironment.getApplication();
@@ -49,7 +51,10 @@ public final class AiSelectionMigrationTest {
     }
 
     private void legacy(String mode, String model, String reasoning) {
-        SharedPreferences.Editor e = Prefs.get(context).edit();
+        // Legacy installations had an explicit ChatGPT provider. Model that upgrade state
+        // instead of accidentally exercising the new-install Gemini default.
+        SharedPreferences.Editor e = Prefs.get(context).edit()
+                .putString(Prefs.PROVIDER, Prefs.PROVIDER_CHATGPT);
         if (mode != null) e.putString(Prefs.INTELLIGENCE_MODE, mode);
         if (model != null) e.putString(Prefs.MODEL, model);
         if (reasoning != null) e.putString(Prefs.REASONING, reasoning);
@@ -111,7 +116,7 @@ public final class AiSelectionMigrationTest {
     // ---- once, and never over a new choice -----------------------------------------------------
 
     @Test public void aFreshInstallGetsTheBroadlyAvailableDefault() {
-        assertEquals(LUNA_MEDIUM, AiSelections.globalDefault(context));
+        assertEquals(GEMINI_DEFAULT, AiSelections.globalDefault(context));
     }
 
     @Test public void anUpgradeMigratesTheStoredModeOnce() {
@@ -238,7 +243,8 @@ public final class AiSelectionMigrationTest {
         assertEquals(LUNA_LOW, AiSelections.forConversation(context, "b"));
         AiSelections.setForConversation(context, "a", SOL_HIGH);
         assertEquals("changing A leaves B alone", LUNA_LOW, AiSelections.forConversation(context, "b"));
-        assertEquals("and leaves the default alone", LUNA_MEDIUM, AiSelections.globalDefault(context));
+        assertEquals("and leaves the new-install default alone", GEMINI_DEFAULT,
+                AiSelections.globalDefault(context));
     }
 
     @Test public void aChatsSelectionSurvivesEveryRewriteOfItsRecord() {

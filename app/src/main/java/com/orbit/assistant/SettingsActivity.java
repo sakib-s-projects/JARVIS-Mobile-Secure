@@ -1229,6 +1229,17 @@ public class SettingsActivity extends Activity implements UiKit.AppearanceListen
      * result arrives through {@link #chatGptBrowserListener}. A failure explains itself and offers
      * code sign-in, and Orbit never switches methods without the user choosing to.
      */
+    private void confirmUnofficialChatGptAuth(Runnable proceed) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Experimental ChatGPT account connection")
+                .setMessage("This sign-in uses an undocumented OpenAI/Codex account interface, not the official OpenAI API. OpenAI may change or block it at any time. Gemini through the official API is the recommended default. Continue only if you understand this risk.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Continue", (d, w) -> proceed.run());
+        AlertDialog dialog = builder.create();
+        styleOrbitDialog(dialog, false);
+        dialog.show();
+    }
+
     private void startChatGptLogin() {
         ChatGptBrowserAuth.Started started = ChatGptBrowserAuth.start(this, chatGptBrowserListener);
         if (!started.ok()) {
@@ -1443,13 +1454,13 @@ public class SettingsActivity extends Activity implements UiKit.AppearanceListen
 
         chatGptStatus = UiKit.text(this, "Checking ChatGPT sign-in…", 15, UiKit.TEXT, true);
         container.addView(chatGptStatus);
-        chatGptHelp = UiKit.text(this, "", 13, UiKit.MUTED, false);
+        chatGptHelp = UiKit.text(this, "Experimental: this uses an undocumented ChatGPT/Codex interface and may stop working without notice. Use Gemini for the official API route.", 13, UiKit.MUTED, false);
         chatGptHelp.setLineSpacing(0, 1.13f);
         chatGptHelp.setPadding(0, UiKit.dp(this, 7), 0, UiKit.dp(this, 13));
         container.addView(chatGptHelp);
 
         chatGptSignIn = primaryButton("Sign in with ChatGPT");
-        chatGptSignIn.setOnClickListener(v -> startChatGptLogin());
+        chatGptSignIn.setOnClickListener(v -> confirmUnofficialChatGptAuth(this::startChatGptLogin));
         container.addView(chatGptSignIn, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, UiKit.dp(this, 48)));
 
@@ -1464,7 +1475,7 @@ public class SettingsActivity extends Activity implements UiKit.AppearanceListen
         chatGptCodeSignIn.setStateListAnimator(null);
         chatGptCodeSignIn.setMinHeight(UiKit.dp(this, 44));
         chatGptCodeSignIn.setMinimumHeight(UiKit.dp(this, 44));
-        chatGptCodeSignIn.setOnClickListener(v -> startCodeSignIn());
+        chatGptCodeSignIn.setOnClickListener(v -> confirmUnofficialChatGptAuth(this::startCodeSignIn));
         container.addView(chatGptCodeSignIn, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, UiKit.dp(this, 44)));
 

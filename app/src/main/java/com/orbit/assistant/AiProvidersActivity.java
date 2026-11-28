@@ -379,6 +379,10 @@ public final class AiProvidersActivity extends Activity {
 
     private void manage(AiProvider provider) {
         String id = provider.id();
+        if (Prefs.PROVIDER_GEMINI.equals(id)) {
+            showGeminiKeySetup();
+            return;
+        }
         if (Prefs.PROVIDER_LOCAL.equals(id)) {
             startActivity(new Intent(this, LocalAiActivity.class));
             return;
@@ -576,6 +580,47 @@ public final class AiProvidersActivity extends Activity {
                 })
                 .create();
         UiKit.styleOrbitDialog(dialog, this, false);
+        dialog.show();
+    }
+
+    private void showGeminiKeySetup() {
+        boolean saved = SecureStore.hasGeminiKey(this);
+        LinearLayout wrap = new LinearLayout(this);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        int pad = UiKit.dp(this, 22);
+        wrap.setPadding(pad, UiKit.dp(this, 8), pad, 0);
+        TextView note = UiKit.text(this,
+                "Create a free-tier API key in Google AI Studio and paste it here. JARVIS encrypts it with Android Keystore; it is never backed up or uploaded to GitHub. Google's free-tier quota and data terms apply.",
+                13, UiKit.MUTED, false);
+        note.setLineSpacing(0, 1.14f);
+        wrap.addView(note);
+        EditText input = new EditText(this);
+        input.setHint(saved ? "Key saved · enter a new key to replace it" : "Gemini API key");
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        input.setTextColor(UiKit.TEXT);
+        input.setHintTextColor(UiKit.MUTED);
+        input.setBackgroundTintList(ColorStateList.valueOf(UiKit.accent(this)));
+        wrap.addView(input, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        AlertDialog.Builder builder = new AlertDialog.Builder(this).setTitle("Gemini connection")
+                .setView(wrap).setNegativeButton("Cancel", null)
+                .setPositiveButton("Save key", (d,w) -> {
+                    String value=input.getText().toString().trim();
+                    if (value.isEmpty()) return;
+                    if (!SecureStore.saveGeminiKey(this,value)) {
+                        Toast.makeText(this,"Could not store the key securely, so it was not saved",Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    Toast.makeText(this,"Gemini API key saved securely",Toast.LENGTH_SHORT).show();
+                    refreshCards();
+                });
+        if (saved) builder.setNeutralButton("Remove key",(d,w) -> {
+            SecureStore.clearGeminiKey(this);
+            Toast.makeText(this,"Gemini key removed",Toast.LENGTH_SHORT).show();
+            refreshCards();
+        });
+        AlertDialog dialog=builder.create();
+        UiKit.styleOrbitDialog(dialog,this,false);
         dialog.show();
     }
 
