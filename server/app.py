@@ -282,6 +282,17 @@ def filter_device_actions(actions: list[DeviceAction], capabilities: list[str], 
     ]
 
 
+class RejectRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Never forward the server-to-server bearer secret to a redirect target."""
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def open_cloudflare_request(request, timeout: float):
+    opener = urllib.request.build_opener(RejectRedirectHandler())
+    return opener.open(request, timeout=timeout)
+
+
 def call_cloudflare_relay(req: AssistantRequest, endpoint: str, shared_secret: str) -> AssistantResponse:
     """Call the isolated Cloudflare adapter using a separate server-to-server secret."""
     parsed = urlsplit(endpoint)
@@ -306,7 +317,7 @@ def call_cloudflare_relay(req: AssistantRequest, endpoint: str, shared_secret: s
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=UPSTREAM_TIMEOUT_SECONDS) as response:
+        with open_cloudflare_request(request, timeout=UPSTREAM_TIMEOUT_SECONDS) as response:
             raw = response.read(1024 * 1024 + 1)
             if len(raw) > 1024 * 1024:
                 raise HTTPException(status_code=502, detail="Cloudflare relay response exceeded the size limit")
