@@ -487,7 +487,7 @@ def test_cloudflare_adapter_uses_separate_bearer_secret_and_filters_actions(monk
         captured["timeout"] = timeout
         return FakeResponse()
 
-    monkeypatch.setattr(relay_app.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(relay_app, "open_cloudflare_request", fake_urlopen)
     req = AssistantRequest(prompt="open maps", capabilities=["OPEN_APP"])
     result = relay_app.call_cloudflare_relay(req, os.environ["JARVIS_CLOUDFLARE_RELAY_URL"], token)
 
@@ -509,12 +509,36 @@ def test_cloudflare_adapter_forwards_screenshot_to_vision_adapter(monkeypatch):
         captured["body"] = json.loads(request.data.decode("utf-8"))
         captured["timeout"] = timeout
         return FakeResponse()
-    monkeypatch.setattr(relay_app.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(relay_app, "open_cloudflare_request", fake_urlopen)
     req = AssistantRequest(prompt="describe", screenshotBase64="aGVsbG8=")
     result = relay_app.call_cloudflare_relay(req, "https://adapter.example.workers.dev", token)
     assert result.text == "screenshot analyzed"
     assert captured["body"]["screenshotBase64"] == "aGVsbG8="
     assert captured["timeout"] == relay_app.UPSTREAM_TIMEOUT_SECONDS
+
+
+def test_cloudflare_adapter_rejects_redirects_without_following(monkeypatch):
+    import io
+    import urllib.error
+    import app as relay_app
+
+    def redirecting_request(request, timeout):
+        assert timeout == relay_app.UPSTREAM_TIMEOUT_SECONDS
+        raise urllib.error.HTTPError(
+            request.full_url, 302, "Found",
+            {"Location": "https://attacker.example/collect"}, io.BytesIO(b"")
+        )
+
+    monkeypatch.setattr(relay_app, "open_cloudflare_request", redirecting_request)
+    with pytest.raises(HTTPException) as exc:
+        relay_app.call_cloudflare_relay(
+            AssistantRequest(prompt="hello"),
+            "https://adapter.example.workers.dev",
+            "c" * 40,
+        )
+    assert exc.value.status_code == 502
+    assert exc.value.headers["X-JARVIS-Adapter-HTTP-Status"] == "302"
+    assert "attacker.example" not in str(exc.value)
 
 
 def test_cloudflare_adapter_requires_clean_https_and_strong_shared_secret():
@@ -557,7 +581,7 @@ def test_cloudflare_adapter_timeout_fails_with_safe_502(monkeypatch):
         assert timeout == relay_app.UPSTREAM_TIMEOUT_SECONDS
         raise TimeoutError("sensitive network detail")
 
-    monkeypatch.setattr(relay_app.urllib.request, "urlopen", timeout_urlopen)
+    monkeypatch.setattr(relay_app, "open_cloudflare_request", timeout_urlopen)
     with pytest.raises(HTTPException) as exc:
         relay_app.call_cloudflare_relay(
             AssistantRequest(prompt="hello"),
@@ -584,7 +608,7 @@ def test_cloudflare_adapter_http_error_body_is_not_exposed(monkeypatch):
             request.full_url, 503, "Service Unavailable", {}, io.BytesIO(body)
         )
 
-    monkeypatch.setattr(relay_app.urllib.request, "urlopen", rejected_urlopen)
+    monkeypatch.setattr(relay_app, "open_cloudflare_request", rejected_urlopen)
     with pytest.raises(HTTPException) as exc:
         relay_app.call_cloudflare_relay(
             AssistantRequest(prompt="hello"),
