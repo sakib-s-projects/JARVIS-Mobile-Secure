@@ -2,9 +2,7 @@ name: Verify JARVIS Staging Adapter Live
 
 on:
   push:
-    branches: [jarvis-branding, h3-memory-context-hardening]
-    paths:
-      - ".github/workflows/verify-staging-adapter.yml"
+    branches: [jarvis-branding, h3-memory-context-hardening, h1-h2-h3-integration]
   workflow_dispatch:
 
 permissions:
